@@ -7,7 +7,7 @@ and httpOnly cookie management.
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify, current_app, make_response, g
 import jwt
-from pydantic import BaseModel, EmailStr, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from app.extensions import db, limiter
 from app.auth.models import AdminUser
@@ -16,8 +16,8 @@ auth_bp = Blueprint("auth", __name__)
 
 
 class LoginSchema(BaseModel):
-    email: EmailStr
-    password: str
+    email: str = Field(..., min_length=3, max_length=128, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 def generate_jwt_tokens(user: AdminUser) -> dict:
