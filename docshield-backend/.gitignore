@@ -1,0 +1,43 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment & Secrets (NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+
+# ML Weights & Large models (NEVER COMMIT)
+app/ml/weights/*
+!app/ml/weights/.gitkeep
+
+# Uploads & temporary artifacts
+uploads/*
+!uploads/.gitkeep
+scratch/
+
+# Database files
+instance/
+*.sqlite3
+*.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
