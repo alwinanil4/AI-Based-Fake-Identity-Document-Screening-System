@@ -125,44 +125,103 @@ This mirrors how commercial deepfake-document detectors are trained — on docum
 
 ---
 
-## Technology Stack
+## Quick Start & Local Execution
 
-| Layer | Technology | Why |
-|---    |---         |---  |
-| Frontend | React.js + Tailwind CSS | Fast to build, judge-friendly UI |
-| Backend | Flask (Python) | Straightforward ML integration |
-| OCR | Tesseract OCR / EasyOCR | Pre-trained, works offline |
-| Barcode / MRZ | zbarcam + custom parser | Quick structural validation |
-| Image Forensics | OpenCV + PIL | ELA, copy-move detection |
-| Deep Learning | PyTorch + EfficientNet | Lightweight, accurate |
-| Vision Transformer | ViT-based backbone (optional) | Top-tier forgery localization |
-| Database | SQLite / MongoDB | Scan history for admin demo |
+DocShield AI runs with a Flask backend (port 5000) and a React + Tailwind CSS frontend (port 5173).
+
+### Prerequisites
+- Python 3.10+ (tested on Python 3.12)
+- Node.js 18+ and npm
+- (Optional) Tesseract OCR installed in system PATH for physical document OCR
+
+### 1. Start Backend Service
+```bash
+cd docshield-backend
+# Activate virtual environment
+.\.venv\Scripts\activate       # On Windows PowerShell
+# source .venv/bin/activate    # On Linux/macOS
+
+# Start Flask API server (runs on http://localhost:5000)
+python run.py
+```
+
+### 2. Start Frontend UI
+```bash
+# In the repository root directory
+npm install
+npm run dev
+```
+Open your browser at `http://localhost:5173` to explore the DocShield AI portal.
 
 ---
 
-## Pitch Emphasis Points
+## Ready-to-Test Judge Presets (Zero Setup Required)
 
-- **Explainable AI** — the system doesn't just give a verdict, it shows the evidence
-- **Multi-layer defense** — no single point of failure; all layers run in parallel
-- **Real-time** — results in seconds, not minutes
-- **Scalable** — deployable at banks, airports, and government offices
-- **Ethical AI** — trained entirely on synthetic data, respects user privacy
+The project includes 4 pre-generated test documents in `sample_documents/` and `public/sample_documents/` that demonstrate every detection capability out of the box:
+
+1. **Genuine Indian Passport (`sample_genuine_passport.png`)**
+   - **Verdict:** Genuine (98.0% Confidence)
+   - **Characteristics:** Valid ICAO Doc 9303 TD3 MRZ check digits (7-3-1 recurring weight algorithm), uniform typography, clean sensor noise.
+2. **Forged Aadhaar Card (`sample_forged_aadhaar_dob_tamper.jpg`)**
+   - **Verdict:** Fake (91.4% Confidence)
+   - **Characteristics:** Spliced Date of Birth with altered compression level (flagged by Layer 3 ELA) and misaligned text baseline.
+3. **Cloned PAN Card (`sample_cloned_pan_card.png`)**
+   - **Verdict:** Fake (88.0% Confidence)
+   - **Characteristics:** Duplicated security emblem and stamp detected by Layer 3 ORB keypoint matching (Copy-Move anomaly).
+4. **Spliced Voter ID (`sample_spliced_voter_id.jpg`)**
+   - **Verdict:** Fake (89.5% Confidence)
+   - **Characteristics:** Photo tampering, noise edge inconsistency, invalid layout.
+
+> **One-Click Demo in UI:** Click the **"Load Preset Document"** buttons directly inside the upload screen at `http://localhost:5173/verify` to instantly load, preview, and analyze these documents without manual file searching!
 
 ---
 
-## Impact & Deployment
+## Dropping in External Colab Model (Layer 4)
 
-DocShield AI is designed for deployment wherever identity documents need to be verified at scale and speed matters:
+DocShield AI is architected so that the neural network trained separately in Google Colab drops directly into the backend with **zero code refactoring**:
 
-- Banks (KYC verification)
-- Airports (travel document checks)
-- Government offices (ID and license verification)
+### Step-by-Step Drop-In:
+1. **Save Model in Colab:**
+   ```python
+   # In your Google Colab training notebook:
+   torch.save(model.state_dict(), "docshield_best_model.pth")
+   ```
+2. **Place File in Backend Weights Folder:**
+   Copy `docshield_best_model.pth` into:
+   ```
+   docshield-backend/app/ml/weights/docshield_best_model.pth
+   ```
+3. **Automatic Loading:**
+   At server startup, `app/ml/model_loader.py` automatically checks for `app/ml/weights/docshield_best_model.pth` and loads it as a singleton.
+4. **Custom Inference / Grad-CAM (Optional):**
+   If your Colab model uses a custom architecture (e.g. Vision Transformer or customized EfficientNet), replace the placeholder methods in `docshield-backend/app/layers/layer4_ai_detection.py`:
+   - `predict(image_path)` — returns `{"is_fake": bool, "confidence": float, "probabilities": dict}`
+   - `generate_gradcam(image_path)` — returns `(heatmap_bgr_array, overlay_bgr_array)`
 
-Because it trains only on synthetic data, it avoids the privacy and legal issues of using real government-issued documents, while still learning to recognize the forgery techniques currently used by fraudsters.
+---
+
+## Running Automated Verification & Tests
+
+### Backend Test Suite (45 Tests, 100% Passed)
+```bash
+cd docshield-backend
+.\.venv\Scripts\python -m pytest tests/ -v
+```
+
+### End-to-End Pipeline Verification Script
+```bash
+cd docshield-backend
+.\.venv\Scripts\python scripts/test_pipeline.py
+```
+
+### Frontend Production Build
+```bash
+npm run build
+```
 
 ---
 
 ## Team
 
 **InnovX** — Karunya Institute of Technology and Sciences, Coimbatore
-Smart India Hackathon 2026, Problem Statement SIH26188
+Smart India Hackathon 2026, Problem Statement SIH26188

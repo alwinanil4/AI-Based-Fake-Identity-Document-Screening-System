@@ -44,12 +44,12 @@ def get_scan_by_id(scan_id: str):
     if scan_id.upper().startswith("SCAN-"):
         try:
             num_id = int(scan_id.split("-")[1])
-            record = ScanResult.query.get(num_id)
+            record = ScanResult.query.filter_by(id=num_id).first()
         except Exception:
             pass
 
     if not record and scan_id.isdigit():
-        record = ScanResult.query.get(int(scan_id))
+        record = ScanResult.query.filter_by(id=int(scan_id)).first()
 
     if not record:
         record = ScanResult.query.filter_by(request_id=scan_id).first()
@@ -61,7 +61,7 @@ def get_scan_by_id(scan_id: str):
             "request_id": getattr(g, "request_id", None),
         }), 404
 
-    return jsonify({
-        "scan": record.to_dict(),
-        "request_id": getattr(g, "request_id", None),
-    }), 200
+    result = record.to_dict()
+    result["scan"] = record.to_dict()
+    result["request_id"] = getattr(g, "request_id", None)
+    return jsonify(result), 200

@@ -42,9 +42,10 @@ def test_history_and_scan_by_id(client):
     # 2. Query history list
     hist_resp = client.get("/api/history")
     assert hist_resp.status_code == 200
-    history = hist_resp.get_json()
-    assert isinstance(history, list)
-    assert any(item["id"] == scan_id for item in history)
+    data = hist_resp.get_json()
+    assert "scans" in data
+    assert isinstance(data["scans"], list)
+    assert any(item["id"] == scan_id for item in data["scans"])
 
     # 3. Query specific scan by ID
     scan_resp = client.get(f"/api/scan/{scan_id}")
