@@ -37,7 +37,7 @@ def test_analyze_valid_image(client):
     assert response.status_code == 200
     res = response.get_json()
     assert "verdict" in res
-    assert res["verdict"] in ["genuine", "fake", "suspicious"]
+    assert res["verdict"] in ["Genuine", "Fake", "Suspicious", "genuine", "fake", "suspicious"]
     assert "confidence" in res
     assert "layer_results" in res
     assert "layer1_behavioral" in res["layer_results"]

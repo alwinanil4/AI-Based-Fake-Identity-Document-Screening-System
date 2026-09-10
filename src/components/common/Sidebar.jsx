@@ -12,10 +12,11 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/verify', label: 'Verify Document', icon: ScanLine, highlight: true },
-  { path: '/history', label: 'Verification History', icon: History },
-  { path: '/analytics', label: 'Threat Analytics', icon: BarChart3 },
+  { path: '/', label: 'Overview', icon: LayoutDashboard },
+  { path: '/verify', label: 'Scan Document', icon: ScanLine, highlight: true },
+  { path: '/history', label: 'Audit History', icon: History },
+  { path: '/dashboard', label: 'Operations Center', icon: ShieldCheck },
+  { path: '/analytics', label: 'Fraud Analytics', icon: BarChart3 },
 ]
 
 export default function Sidebar() {
@@ -25,7 +26,7 @@ export default function Sidebar() {
         {/* Navigation Group */}
         <div>
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">
-            Operations
+            Screening System
           </p>
           <nav className="space-y-1">
             {NAV_ITEMS.map((item) => {
@@ -46,7 +47,7 @@ export default function Sidebar() {
                   <Icon className="w-4 h-4 shrink-0" />
                   <span>{item.label}</span>
                   {item.highlight && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
                   )}
                 </NavLink>
               )
@@ -61,7 +62,7 @@ export default function Sidebar() {
             <span>Supported Indian IDs</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {['Aadhaar (UIDAI)', 'PAN (NSDL)', 'Voter ID (EPIC)', 'Driving License', 'Passport'].map((doc) => (
+            {['Aadhaar (UIDAI)', 'PAN (NSDL)', 'Voter ID (EPIC)', 'Passport (ICAO)', 'Driving License'].map((doc) => (
               <span
                 key={doc}
                 className="px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 text-[10px] border border-slate-700/60"
@@ -77,14 +78,15 @@ export default function Sidebar() {
       <div className="p-4 border-t border-slate-800/80">
         <div className="p-3 rounded-lg bg-gradient-to-br from-slate-900 to-blue-950/40 border border-blue-900/30">
           <div className="flex items-center justify-between text-xs text-slate-300 font-medium mb-1">
-            <span>SIH 2024 Finalist</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">v1.0</span>
+            <span className="font-bold text-white">SIH 2026</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Team InnovX</span>
           </div>
           <p className="text-[11px] text-slate-400">
-            Multi-Modal Vision & Forensic Tamper Screening
+            Problem Statement SIH26188: AI-Based Identity Screening
           </p>
         </div>
       </div>
     </aside>
   )
 }
+

@@ -15,15 +15,16 @@ export default function Navbar() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold tracking-tight text-white text-base">TrustID</span>
+              <span className="font-bold tracking-tight text-white text-base">DocShield AI</span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                AI Screening
+                SIH 2026
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Smart India Hackathon 2024</p>
+            <p className="text-[11px] text-slate-400 hidden sm:block">Team InnovX • SIH26188</p>
           </div>
         </Link>
       </div>
+
 
       {/* Center status indicator */}
       <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs">

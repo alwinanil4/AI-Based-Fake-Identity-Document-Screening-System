@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/common/Navbar'
 import Sidebar from './components/common/Sidebar'
+import LandingPage from './pages/LandingPage'
 import Dashboard from './pages/Dashboard'
 import VerifyDocument from './pages/VerifyDocument'
 import VerificationResult from './pages/VerificationResult'
@@ -51,10 +52,11 @@ export default function App() {
         {/* Dynamic Page Content Viewport */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/verify" element={<VerifyDocument />} />
             <Route path="/results/:id" element={<VerificationResult />} />
             <Route path="/history" element={<History />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

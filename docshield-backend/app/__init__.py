@@ -51,11 +51,18 @@ def create_app(config_name: str = None) -> Flask:
     from app.api.analyze import analyze_bp
     from app.auth.routes import auth_bp
     from app.api.admin import admin_bp
+    from app.api.history import history_bp
 
+    # Both /api/v1/ and /api/ prefixes supported
     app.register_blueprint(health_bp, url_prefix="/api/v1")
+    app.register_blueprint(health_bp, url_prefix="/api", name="health_root")
     app.register_blueprint(analyze_bp, url_prefix="/api/v1")
+    app.register_blueprint(analyze_bp, url_prefix="/api", name="analyze_root")
+    app.register_blueprint(history_bp, url_prefix="/api")
+    app.register_blueprint(history_bp, url_prefix="/api/v1", name="history_v1")
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(admin_bp, url_prefix="/api/v1/admin")
+
 
     # Register Global Error Handlers (Zero-Leakage Policy)
     register_error_handlers(app)

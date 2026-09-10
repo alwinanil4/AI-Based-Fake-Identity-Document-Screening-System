@@ -20,17 +20,37 @@ export default function VerifyDocument() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
 
   const SCAN_STAGES = [
-    { title: 'Optical Character Recognition', desc: 'Parsing text, font kerning, and baseline typography' },
-    { title: 'Biometric Face & Aspect Ratio Match', desc: 'Analyzing portrait symmetry, resolution, and GAN artifacts' },
-    { title: 'Physical Security & Watermark Inspection', desc: 'Verifying Ashoka emblem, holographic reflectance, and guilloche' },
-    { title: 'Tampering & Algorithmic Checksum Validation', desc: 'Performing Error Level Analysis (ELA) and Verhoeff/MoRTH checks' }
+    { 
+      layer: 'Layer 1', 
+      title: 'Behavioral & Device Signals', 
+      desc: 'Checking EXIF camera metadata, client telemetry, and sensor noise entropy',
+      color: 'border-cyan-500/40 text-cyan-400'
+    },
+    { 
+      layer: 'Layer 2', 
+      title: 'OCR & Structural Validation', 
+      desc: 'Tesseract OCR text parsing, ICAO 7-3-1 check digits, and typographic baseline alignment',
+      color: 'border-emerald-500/40 text-emerald-400'
+    },
+    { 
+      layer: 'Layer 3', 
+      title: 'Image Forensics Engine', 
+      desc: 'Error Level Analysis (ELA), ORB copy-move clone detection, and 2D FFT spectral analysis',
+      color: 'border-amber-500/40 text-amber-400'
+    },
+    { 
+      layer: 'Layer 4', 
+      title: 'AI / Deep Learning Detection', 
+      desc: 'Deep convolutional feature maps and Grad-CAM explainable heatmap localization',
+      color: 'border-purple-500/40 text-purple-400'
+    }
   ]
 
   const handleStartVerification = async (payload) => {
     setIsProcessing(true)
     setCurrentStepIndex(0)
 
-    // Progress through visual steps during the simulated AI backend call
+    // Progress through visual steps during the parallel AI backend call
     const stepInterval = setInterval(() => {
       setCurrentStepIndex((prev) => {
         if (prev < SCAN_STAGES.length - 1) {
@@ -38,13 +58,16 @@ export default function VerifyDocument() {
         }
         return prev
       })
-    }, 550)
+    }, 600)
 
     try {
       const result = await api.screenDocument(payload)
+      setCurrentStepIndex(SCAN_STAGES.length - 1)
       clearInterval(stepInterval)
-      // Navigate to the comprehensive verification result page
-      navigate(`/results/${result.id}`)
+      // Small pause to let user see all 4 layers completed
+      setTimeout(() => {
+        navigate(`/results/${result.id}`)
+      }, 400)
     } catch (err) {
       clearInterval(stepInterval)
       console.error('Screening failed:', err)
@@ -59,20 +82,20 @@ export default function VerifyDocument() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-white tracking-tight">
-              AI Identity Screening Terminal
+              DocShield AI — Multi-Layer Document Screening
             </h1>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 font-semibold">
-              Live Inspection
+              SIH 2026 Live Terminal
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Upload an Aadhaar, PAN, Voter ID, Driving License, or Passport to detect tampering, text alteration, or synthetic forgery.
+            Parallel behavioral, structural, forensic, and AI vision inspection for Indian identity documents.
           </p>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Checkpoint Security Encrypted</span>
+          <span>Parallel 4-Layer Execution</span>
         </div>
       </div>
 
@@ -85,76 +108,92 @@ export default function VerifyDocument() {
 
       {/* Active AI Processing Stepper Modal Overlay */}
       {isProcessing && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0d1322] border border-blue-500/40 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[#0d1322] border border-blue-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
             {/* Animated Laser Scanner Line */}
             <div className="scanner-laser" />
 
             <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-3 shadow-[0_0_20px_rgba(59,130,246,0.3)] animate-pulse">
+              <div className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-3 shadow-[0_0_25px_rgba(59,130,246,0.35)] animate-pulse">
                 <Scan className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-bold text-white tracking-tight">
-                AI Vision Screening in Progress
+              <h3 className="text-xl font-bold text-white tracking-tight">
+                Parallel Multi-Layer Inspection
               </h3>
               <p className="text-xs text-slate-400 mt-1">
-                Executing multi-vector deep learning forensic model
+                Executing Layers 1–4 concurrently across hardware threads
               </p>
             </div>
 
             {/* Stepper Progress */}
-            <div className="space-y-3.5 mb-6">
+            <div className="space-y-3 mb-6">
               {SCAN_STAGES.map((stage, idx) => {
                 const isCompleted = idx < currentStepIndex
                 const isCurrent = idx === currentStepIndex
                 return (
                   <div
-                    key={stage.title}
-                    className={`p-3 rounded-lg border transition-all flex items-start gap-3 ${
+                    key={stage.layer}
+                    className={`p-3 rounded-xl border transition-all flex items-start gap-3.5 ${
                       isCurrent
-                        ? 'bg-blue-600/15 border-blue-500/50 text-white'
+                        ? 'bg-blue-600/15 border-blue-500/60 text-white shadow-md shadow-blue-500/10'
                         : isCompleted
-                        ? 'bg-emerald-950/20 border-emerald-500/30 text-slate-300'
-                        : 'bg-slate-900/40 border-slate-800/60 text-slate-500'
+                        ? 'bg-emerald-950/20 border-emerald-500/40 text-slate-200'
+                        : 'bg-slate-900/30 border-slate-800/60 text-slate-500'
                     }`}
                   >
-                    <div className="mt-0.5">
+                    <div className="mt-1">
                       {isCompleted ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                       ) : isCurrent ? (
-                        <div className="w-4 h-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+                        <div className="w-5 h-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
                       ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-700" />
+                        <div className="w-5 h-5 rounded-full border border-slate-700 flex items-center justify-center text-[10px] text-slate-600 font-bold">
+                          {idx + 1}
+                        </div>
                       )}
                     </div>
 
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold">{stage.title}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${stage.color} bg-black/40 font-mono`}>
+                            {stage.layer}
+                          </span>
+                          <span className="text-xs font-bold">{stage.title}</span>
+                        </div>
                         {isCurrent && (
-                          <span className="text-[10px] text-blue-400 font-mono animate-pulse">
-                            Processing...
+                          <span className="text-[10px] text-blue-400 font-mono font-semibold animate-pulse">
+                            Analyzing...
                           </span>
                         )}
                         {isCompleted && (
-                          <span className="text-[10px] text-emerald-400 font-mono">
-                            Done
+                          <span className="text-[10px] text-emerald-400 font-mono font-semibold flex items-center gap-1">
+                            <span>Completed</span>
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{stage.desc}</p>
+                      <p className="text-[11px] text-slate-400 mt-1 leading-snug">{stage.desc}</p>
                     </div>
                   </div>
                 )
               })}
             </div>
 
+            {/* Live Progress Bar */}
+            <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden mb-3 border border-slate-800">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-400 transition-all duration-300"
+                style={{ width: `${Math.min(100, Math.round(((currentStepIndex + 1) / SCAN_STAGES.length) * 100))}%` }}
+              />
+            </div>
+
             <p className="text-center text-[11px] text-slate-500 font-mono">
-              Confidence threshold: 95.0% • SIH Model Pipeline
+              Aggregating outputs via deterministic forensic veto logic
             </p>
           </div>
         </div>
       )}
+
 
       {/* Verification Guidelines / Help for Officers */}
       <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 space-y-2">

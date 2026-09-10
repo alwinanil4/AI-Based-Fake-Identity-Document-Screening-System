@@ -252,6 +252,47 @@ class OCRForensicExtractor:
 
         return fields
 
+    @staticmethod
+    def check_layout_and_font_alignment(image: Image.Image) -> Tuple[bool, List[str]]:
+        """Analyzes text baseline alignment and font bounding box consistency using OpenCV.
+
+        Detects rotated, shifted, or pasted text lines (common in amateur forged dates/numbers).
+        """
+        anomalies = []
+        try:
+            import cv2
+            img_np = np.array(image.convert("RGB"))
+            gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+            # Threshold to isolate text characters
+            _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+            # Morphological dilation along horizontal axis to group characters into text lines
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 3))
+            dilated = cv2.dilate(thresh, kernel, iterations=1)
+
+            contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            angles = []
+            for cnt in contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                # Filter for text-line proportioned blobs
+                if w > 40 and 8 < h < 100:
+                    rect = cv2.minAreaRect(cnt)
+                    angle = rect[-1]
+                    if angle < -45:
+                        angle = 90 + angle
+                    if abs(angle) > 0.5:
+                        angles.append(abs(angle))
+
+            # If there's high variance in text baseline angles, text was altered or pasted at odd angles
+            if angles and np.std(angles) > 12.0:
+                anomalies.append("Typographic baseline shift / non-parallel font alignment detected")
+
+        except Exception as e:
+            logger.debug("Layout alignment check skipped: %s", str(e))
+
+        is_passed = len(anomalies) == 0
+        return is_passed, anomalies
+
 
 def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> Dict[str, Any]:
     """Main execution function for Layer 2: OCR & Structural Validation."""
@@ -270,6 +311,9 @@ def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> D
     # 4. Extract visual fields
     fields = OCRForensicExtractor.extract_structural_fields(text)
 
+    # 5. Check layout & font baseline alignment
+    alignment_passed, alignment_anomalies = OCRForensicExtractor.check_layout_and_font_alignment(image)
+
     # If MRZ provided trusted structured fields, fill them in
     if mrz_info.get("mrz_detected"):
         if not fields.get("document_number"):
@@ -284,6 +328,8 @@ def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> D
     anomalies: List[str] = []
     if mrz_info.get("anomalies"):
         anomalies.extend(mrz_info["anomalies"])
+    if alignment_anomalies:
+        anomalies.extend(alignment_anomalies)
 
     # Cross-check visual fields vs MRZ
     cross_check_matches = True
@@ -326,6 +372,7 @@ def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> D
         "mrz_checksum_valid": mrz_info.get("mrz_checksum_valid"),
         "mrz_format": mrz_info.get("format"),
         "barcode_detected": len(barcodes) > 0,
+        "alignment_passed": alignment_passed,
         "cross_check_matches": cross_check_matches,
         "anomalies": anomalies,
     }

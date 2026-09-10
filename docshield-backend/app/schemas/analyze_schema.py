@@ -74,15 +74,20 @@ class LayerResultsBundle(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     """Unified forensic verdict output format."""
-    verdict: str = Field(description="'genuine' | 'fake' | 'suspicious'")
+    verdict: str = Field(description="'Genuine' | 'Fake' | 'Suspicious'")
     confidence: float = Field(ge=0.0, le=100.0)
     heatmap: Optional[str] = Field(
+        default=None, description="Base64 PNG data URL of forensic anomaly heatmap overlay"
+    )
+    heatmap_base64: Optional[str] = Field(
         default=None, description="Base64 PNG data URL of forensic anomaly heatmap overlay"
     )
     reason_tags: List[str] = Field(
         default_factory=list, description="Human-readable plain language evidence tags"
     )
-    layer_results: LayerResultsBundle
-    analysis_time_ms: float = Field(ge=0.0)
-    request_id: str
-    timestamp: str
+    layer_results: Any
+    analysis_time_ms: float = Field(default=0.0, ge=0.0)
+    processing_time_ms: float = Field(default=0.0, ge=0.0)
+    request_id: str = "local-scan"
+    timestamp: str = ""
+

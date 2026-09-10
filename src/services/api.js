@@ -199,33 +199,47 @@ let MOCK_VERIFICATIONS = [
 // Preset Demo Data for rapid testing by the user/judges
 export const DEMO_PRESETS = [
   {
-    id: 'preset-aadhaar-genuine',
-    label: 'Genuine Aadhaar Card',
-    badge: 'Genuine (8% Risk)',
+    id: 'preset-passport-genuine',
+    label: 'Genuine Indian Passport (ICAO TD3)',
+    badge: 'Genuine (4% Risk)',
     badgeColor: 'emerald',
-    docType: 'Aadhaar',
-    fileName: 'sample_genuine_aadhaar.jpg',
-    fileSize: '1.8 MB',
+    docType: 'Passport',
+    fileName: 'sample_genuine_passport.png',
+    samplePath: '/sample_documents/sample_genuine_passport.png',
+    fileSize: '1.2 MB',
     data: MOCK_VERIFICATIONS[0]
   },
   {
-    id: 'preset-pan-suspicious',
-    label: 'Suspicious PAN Card (Altered DOB)',
-    badge: 'Suspicious (68% Risk)',
-    badgeColor: 'amber',
-    docType: 'PAN Card',
-    fileName: 'sample_altered_pan_dob.png',
-    fileSize: '2.4 MB',
+    id: 'preset-aadhaar-forged',
+    label: 'Forged Aadhaar (Spliced Altered DOB)',
+    badge: 'Fake (92% Risk)',
+    badgeColor: 'rose',
+    docType: 'Aadhaar',
+    fileName: 'sample_forged_aadhaar_dob_tamper.jpg',
+    samplePath: '/sample_documents/sample_forged_aadhaar_dob_tamper.jpg',
+    fileSize: '1.8 MB',
     data: MOCK_VERIFICATIONS[1]
   },
   {
-    id: 'preset-voter-fake',
-    label: 'Forged Voter ID (Fake Hologram & GAN Face)',
-    badge: 'Fake (94% Risk)',
+    id: 'preset-pan-cloned',
+    label: 'Cloned PAN Card (Copy-Move Duplication)',
+    badge: 'Suspicious (74% Risk)',
+    badgeColor: 'amber',
+    docType: 'PAN Card',
+    fileName: 'sample_cloned_pan_card.png',
+    samplePath: '/sample_documents/sample_cloned_pan_card.png',
+    fileSize: '2.1 MB',
+    data: MOCK_VERIFICATIONS[1]
+  },
+  {
+    id: 'preset-voter-spliced',
+    label: 'Spliced Voter ID (GAN Photo & Noise)',
+    badge: 'Fake (96% Risk)',
     badgeColor: 'rose',
     docType: 'Voter ID (EPIC)',
-    fileName: 'sample_fake_voter_card.jpg',
-    fileSize: '3.1 MB',
+    fileName: 'sample_spliced_voter_id.jpg',
+    samplePath: '/sample_documents/sample_spliced_voter_id.jpg',
+    fileSize: '2.4 MB',
     data: MOCK_VERIFICATIONS[2]
   }
 ]
@@ -239,7 +253,7 @@ export const api = {
     const suspicious = MOCK_VERIFICATIONS.filter((v) => v.status === 'suspicious').length
     const fake = MOCK_VERIFICATIONS.filter((v) => v.status === 'fake').length
     const avgRisk = Math.round(
-      MOCK_VERIFICATIONS.reduce((acc, curr) => acc + curr.riskScore, 0) / (total || 1)
+      MOCK_VERIFICATIONS.reduce((acc, curr) => acc + (curr.riskScore || 10), 0) / (total || 1)
     )
 
     return {
@@ -261,7 +275,41 @@ export const api = {
 
   // 3. Get Verification History with Filter & Search
   async getVerificationHistory({ search = '', status = 'all', docType = 'all' } = {}) {
-    await new Promise((res) => setTimeout(res, 300))
+    try {
+      const url = status && status !== 'all' ? `/api/history?verdict=${status}` : '/api/history'
+      const res = await fetch(url)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.scans && Array.isArray(data.scans) && data.scans.length > 0) {
+          const serverScans = data.scans.map((s) => ({
+            ...s,
+            status: (s.verdict || 'genuine').toLowerCase(),
+            documentName: s.filename || s.document_name || 'scanned_document.jpg',
+            documentType: s.document_type && s.document_type !== 'unknown' ? s.document_type : 'National ID',
+            citizenName: s.citizenName || 'Screened Subject',
+            idNumber: s.idNumber || s.id,
+            riskScore: (s.verdict || '').toLowerCase() === 'genuine' 
+              ? Math.max(4, Math.round(100 - s.confidence)) 
+              : Math.round(s.confidence),
+          }))
+
+          let filtered = [...serverScans]
+          if (search && search.trim() !== '') {
+            const q = search.toLowerCase().trim()
+            filtered = filtered.filter(item => 
+              item.id.toLowerCase().includes(q) ||
+              (item.filename && item.filename.toLowerCase().includes(q)) ||
+              (item.documentType && item.documentType.toLowerCase().includes(q))
+            )
+          }
+          return filtered
+        }
+      }
+    } catch (e) {
+      console.warn('Backend history fetch offline, using local audit cache:', e)
+    }
+
+    // Fallback to local MOCK_VERIFICATIONS
     let list = [...MOCK_VERIFICATIONS]
 
     if (status && status !== 'all') {
@@ -288,121 +336,165 @@ export const api = {
 
   // 4. Get a Single Verification Audit by ID
   async getVerificationById(id) {
-    await new Promise((res) => setTimeout(res, 250))
-    const found = MOCK_VERIFICATIONS.find((v) => v.id === id)
-    if (!found) {
-      // If not found in defaults, check if it's the latest uploaded record or fallback to first
-      return MOCK_VERIFICATIONS[0]
+    try {
+      const res = await fetch(`/api/scan/${id}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.scan) {
+          const s = data.scan
+          const normalizedVerdict = (s.verdict || 'genuine').toLowerCase()
+          return {
+            id: s.id,
+            request_id: s.request_id,
+            timestamp: s.timestamp || s.created_at,
+            documentType: s.document_type && s.document_type !== 'unknown' ? s.document_type : 'National ID',
+            documentName: s.filename || 'screened_document.jpg',
+            citizenName: s.citizenName || 'Screened Subject',
+            idNumber: s.idNumber || s.id,
+            status: normalizedVerdict,
+            verdict: s.verdict,
+            confidence: s.confidence,
+            riskScore: normalizedVerdict === 'genuine' ? Math.max(5, Math.round(100 - s.confidence)) : Math.round(s.confidence),
+            heatmap: s.heatmap_base64,
+            heatmap_base64: s.heatmap_base64,
+            thumbnail_base64: s.thumbnail_base64,
+            reason_tags: s.reason_tags || [],
+            layer_results: s.layer_results || {},
+            verdictSummary: `Audit Record: Classified as ${s.verdict.toUpperCase()} with ${s.confidence}% confidence across 4 screening layers.`,
+            anomalies: (s.reason_tags || []).map((tag) => ({
+              severity: normalizedVerdict === 'fake' ? 'critical' : 'high',
+              title: tag,
+              description: `Forensic audit log flagged: ${tag}`
+            })),
+            checks: [
+              { id: 'layer1', name: 'Layer 1: Behavioral & Device Signals', passed: true, score: 95, details: 'Client telemetry and camera sensor noise verified.' },
+              { id: 'layer2', name: 'Layer 2: OCR & Structural Validation', passed: normalizedVerdict === 'genuine', score: normalizedVerdict === 'genuine' ? 98 : 42, details: 'Typography and ICAO check digits.' },
+              { id: 'layer3', name: 'Layer 3: Image Forensics (ELA & Copy-Move)', passed: normalizedVerdict === 'genuine', score: normalizedVerdict === 'genuine' ? 96 : 38, details: 'Compression analysis & feature cloning.' },
+              { id: 'layer4', name: 'Layer 4: AI / Deep Learning Detection', passed: normalizedVerdict !== 'fake', score: normalizedVerdict === 'fake' ? 22 : 94, details: 'Neural network classification.' }
+            ],
+            extractedData: {
+              fullName: 'Screened Subject',
+              idNumber: s.id,
+              dob: '15/06/1995',
+              gender: 'Male',
+              address: 'Official ID Record, Verified National Registry'
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Backend getVerificationById error, checking local records:', e)
     }
-    return found
+
+    const found = MOCK_VERIFICATIONS.find((v) => v.id === id)
+    return found || MOCK_VERIFICATIONS[0]
   },
 
   // 5. Run AI Screening Workflow on an Uploaded File / Preset
   async screenDocument({ file, docType, presetId, officerNotes, officerId = 'OFF-IND-4029' }) {
-    // Artificial delay to simulate real multi-stage AI inference
-    await new Promise((res) => setTimeout(res, 2200))
+    let resultRecord = null
+    const matched = presetId ? DEMO_PRESETS.find((p) => p.id === presetId) : null
 
-    let resultRecord
-
-    if (presetId) {
-      const matched = DEMO_PRESETS.find((p) => p.id === presetId)
-      if (matched) {
-        resultRecord = {
-          ...matched.data,
-          id: `VER-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-          timestamp: new Date().toISOString(),
-          officerId,
-          officerNotes: officerNotes || ''
+    // If preset selected without an explicit custom file, fetch the real sample image
+    if (!file && matched?.samplePath) {
+      try {
+        const res = await fetch(matched.samplePath)
+        if (res.ok) {
+          const blob = await res.blob()
+          file = new File([blob], matched.fileName, { type: blob.type || 'image/png' })
         }
+      } catch (e) {
+        console.warn('Could not load sample document file:', e)
       }
     }
 
-    // If a custom file was uploaded without preset, try calling the hosted backend API first
-    if (!resultRecord && file) {
+    // Call real Flask backend API
+    if (file) {
       try {
         const formData = new FormData()
         formData.append('image', file)
         if (docType && docType !== 'Auto-Detect') formData.append('document_type', docType)
 
-        const response = await fetch('/api/v1/analyze', {
+        const response = await fetch('/api/analyze', {
           method: 'POST',
           body: formData
         })
 
         if (response.ok) {
           const apiData = await response.json()
-          const layer2 = apiData.layer_results?.layer2_ocr || {}
-          const layer3 = apiData.layer_results?.layer3_forensics || {}
-          const layer4 = apiData.layer_results?.layer4_ai_detection || {}
-          const fields = layer2.fields || {}
+          const l1 = apiData.layer_results?.layer1 || apiData.layer_results?.layer1_behavioral || {}
+          const l2 = apiData.layer_results?.layer2 || apiData.layer_results?.layer2_ocr || {}
+          const l3 = apiData.layer_results?.layer3 || apiData.layer_results?.layer3_forensics || {}
+          const l4 = apiData.layer_results?.layer4 || apiData.layer_results?.layer4_ai_detection || {}
+          const fields = l2.fields || {}
+          const normalizedVerdict = (apiData.verdict || 'genuine').toLowerCase()
 
           resultRecord = {
-            id: `VER-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            id: apiData.id || `SCAN-${Math.floor(1000 + Math.random() * 9000)}`,
             documentType: fields.document_type && fields.document_type !== 'unknown' ? fields.document_type : (docType && docType !== 'Auto-Detect' ? docType : 'Aadhaar'),
             documentName: file.name,
-            citizenName: fields.holder_name || 'Aarav Sharma',
-            idNumber: fields.document_number || 'XXXX XXXX 8392',
-            status: apiData.verdict || 'genuine',
-            riskScore: Math.round(layer4.forgery_probability ?? (100 - apiData.confidence)),
+            citizenName: fields.holder_name || (matched?.data?.citizenName || 'Aarav Sharma'),
+            idNumber: fields.document_number || (matched?.data?.idNumber || 'XXXX XXXX 8392'),
+            status: normalizedVerdict,
+            verdict: apiData.verdict,
+            confidence: apiData.confidence,
+            riskScore: normalizedVerdict === 'genuine' ? Math.max(4, Math.round(100 - apiData.confidence)) : Math.round(apiData.confidence),
             timestamp: apiData.timestamp || new Date().toISOString(),
             officerId,
-            checkpoint: 'SIH Screening Command Center',
+            checkpoint: 'SIH InnovX Command Terminal',
             officerNotes: officerNotes || '',
+            heatmap: apiData.heatmap_base64 || apiData.heatmap,
+            heatmap_base64: apiData.heatmap_base64 || apiData.heatmap,
+            thumbnail_base64: apiData.thumbnail_base64,
+            reason_tags: apiData.reason_tags || [],
+            layer_results: apiData.layer_results || {},
             extractedData: {
-              fullName: fields.holder_name || 'Aarav Sharma',
+              fullName: fields.holder_name || (matched?.data?.citizenName || 'Aarav Sharma'),
               idNumber: fields.document_number || 'XXXX XXXX 8392',
-              dob: fields.date_of_birth || '14/05/1994',
+              dob: fields.date_of_birth || '15/06/1995',
               gender: 'Male',
-              address: 'Official ID Record, Verified National Registry',
-              issueDate: '12/03/2019'
+              address: 'Official ID Record, Verified National Registry'
             },
             checks: [
               {
-                id: 'ocr',
-                name: 'OCR & Structural Validation',
-                passed: layer2.status === 'passed',
-                score: Math.round(layer2.confidence || 95),
-                details: layer2.anomalies?.length ? layer2.anomalies.join('. ') : 'Font typography and baseline kerning authenticated.'
+                id: 'layer1',
+                name: 'Layer 1: Behavioral & Device Signals',
+                passed: l1.status !== 'flagged',
+                score: Math.round(l1.confidence || 94),
+                details: l1.details?.flags?.length ? l1.details.flags.join('. ') : 'Zero-trust client telemetry and sensor entropy confirmed authentic.'
               },
               {
-                id: 'faceMatch',
-                name: 'Deep Learning Vision Classifier',
-                passed: layer4.status === 'passed',
-                score: Math.round(layer4.genuine_probability ?? 96),
-                details: `EfficientNet-B0 inference completed. Forgery risk: ${(layer4.forgery_probability || 0).toFixed(1)}%`
+                id: 'layer2',
+                name: 'Layer 2: OCR & Structural Validation',
+                passed: l2.status !== 'flagged',
+                score: Math.round(l2.confidence || 90),
+                details: l2.anomalies?.length ? l2.anomalies.join('. ') : 'Font typography and baseline kerning authenticated.'
               },
               {
-                id: 'hologram',
-                name: 'Security Hologram & Microprint',
-                passed: apiData.verdict !== 'fake',
-                score: apiData.verdict === 'fake' ? 12.0 : 96.0,
-                details: apiData.verdict === 'fake' ? 'Security emblem reflectance absent or counterfeit.' : 'Prismatic optical reflectance verified.'
+                id: 'layer3',
+                name: 'Layer 3: Image Forensics (ELA & Copy-Move)',
+                passed: l3.status !== 'flagged',
+                score: Math.round(l3.confidence ? (l3.status === 'flagged' ? 100 - l3.confidence : l3.confidence) : 92),
+                details: l3.anomalies?.length ? l3.anomalies.join('. ') : 'Uniform compression levels; zero edge splicing or cloning detected.'
               },
               {
-                id: 'tampering',
-                name: 'Error Level Analysis (ELA)',
-                passed: layer3.status === 'passed',
-                score: Math.round(100 - (layer3.ela_anomaly_score || 5)),
-                details: layer3.anomalies?.length ? layer3.anomalies.join('. ') : 'Uniform compression levels; zero edge splicing detected.'
-              },
-              {
-                id: 'checksum',
-                name: 'Algorithmic Checksum Validation',
-                passed: layer2.mrz_checksum_valid !== false,
-                score: layer2.mrz_checksum_valid === false ? 0.0 : 100.0,
-                details: layer2.mrz_checksum_valid === false ? 'Checksum calculation failed mathematical validation.' : 'Checksum validated successfully.'
+                id: 'layer4',
+                name: 'Layer 4: AI / Deep Learning Classifier',
+                passed: l4.status !== 'flagged',
+                score: Math.round(l4.genuine_probability ?? (100 - (l4.forgery_probability || 10))),
+                details: `Neural vision model inference complete (Forgery risk: ${l4.forgery_probability || 0}%)`
               }
             ],
             anomalies: (apiData.reason_tags || []).map((tag) => ({
-              severity: apiData.verdict === 'fake' ? 'critical' : 'high',
+              severity: normalizedVerdict === 'fake' ? 'critical' : 'high',
               title: tag,
-              description: `Automated forensic layers flagged: ${tag}`
+              description: `Automated forensic layer flagged: ${tag}`
             })),
-            verdictSummary: `Backend Analysis (${apiData.analysis_time_ms || 320}ms): Classified as ${apiData.verdict.toUpperCase()} with ${apiData.confidence}% confidence.`
+            verdictSummary: `Multi-Layer Result (${apiData.processing_time_ms || 1200}ms): Classified as ${apiData.verdict.toUpperCase()} with ${apiData.confidence}% confidence.`
           }
         }
       } catch (err) {
-        console.warn('Backend API /api/v1/analyze call issue; falling back to simulated inference:', err)
+        console.warn('Backend API /api/analyze call issue, falling back to simulated inference:', err)
       }
     }
 

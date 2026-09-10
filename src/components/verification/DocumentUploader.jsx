@@ -89,17 +89,31 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleSelectPreset = (preset) => {
+  const handleSelectPreset = async (preset) => {
     setSelectedPreset(preset)
+    setSelectedDocType(preset.docType)
+    setPreviewUrl(preset.samplePath || null)
+    setErrorMessage('')
+    if (preset.samplePath) {
+      try {
+        const res = await fetch(preset.samplePath)
+        if (res.ok) {
+          const blob = await res.blob()
+          const fileObj = new File([blob], preset.fileName, { type: blob.type || 'image/png' })
+          setSelectedFile(fileObj)
+          return
+        }
+      } catch (e) {
+        console.warn('Failed to load sample blob:', e)
+      }
+    }
     setSelectedFile({
       name: preset.fileName,
       size: 2450000,
       type: 'image/jpeg'
     })
-    setSelectedDocType(preset.docType)
-    setPreviewUrl(null)
-    setErrorMessage('')
   }
+
 
   const handleTriggerSubmit = () => {
     if (!selectedFile && !selectedPreset) {

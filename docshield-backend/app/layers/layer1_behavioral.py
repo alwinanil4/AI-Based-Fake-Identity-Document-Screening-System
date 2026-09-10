@@ -8,7 +8,7 @@ import math
 import time
 from typing import Dict, Any, List, Optional
 import numpy as np
-from PIL import Image
+from PIL import Image, ExifTags
 
 # Known automated/headless user-agent signatures
 AUTOMATION_SIGNATURES = [
@@ -31,6 +31,34 @@ VIRTUAL_CAM_SIGNATURES = [
     "vysor",
     "fake-webcam",
 ]
+
+# Known graphic editing software keywords in EXIF
+PHOTO_EDITING_SIGNATURES = [
+    "photoshop",
+    "gimp",
+    "paint.net",
+    "canva",
+    "lightroom",
+    "snapseed",
+    "picsart",
+    "adobe",
+    "coreldraw",
+]
+
+
+def extract_exif_metadata(image: Image.Image) -> Dict[str, Any]:
+    """Extracts human-readable EXIF tags from a PIL image."""
+    exif_data = {}
+    try:
+        raw_exif = image.getexif()
+        if raw_exif:
+            for tag_id, val in raw_exif.items():
+                tag_name = ExifTags.TAGS.get(tag_id, str(tag_id))
+                if isinstance(val, (str, int, float)):
+                    exif_data[tag_name] = str(val)
+    except Exception:
+        pass
+    return exif_data
 
 
 def calculate_image_entropy(image: Image.Image) -> float:
@@ -65,6 +93,8 @@ def run_layer1_analysis(
     is_emulator = False
     is_virtual_cam = False
     is_injection_attack = False
+    is_editing_software_detected = False
+    has_camera_exif = False
 
     user_agent = headers.get("User-Agent", "").lower()
     client_device = headers.get("X-Client-Device", "").lower()
@@ -91,7 +121,6 @@ def run_layer1_analysis(
     if capture_time_str:
         try:
             client_ts = float(capture_time_str)
-            # Check for timestamp in milliseconds vs seconds
             if client_ts > 1e11:
                 client_ts = client_ts / 1000.0
             timestamp_skew = abs(now - client_ts)
@@ -111,7 +140,31 @@ def run_layer1_analysis(
         except (ValueError, TypeError):
             pass
 
-    # 4. Camera Sensor Physical Noise vs Synthetic Flatness
+    # 4. EXIF & Metadata Forensics (Camera vs Screenshot vs Re-encoded)
+    exif_tags = extract_exif_metadata(image)
+    make = exif_tags.get("Make", "").lower()
+    model = exif_tags.get("Model", "").lower()
+    software = exif_tags.get("Software", "").lower()
+
+    if make or model:
+        has_camera_exif = True
+
+    # Check for photo editing software metadata
+    for editor_sig in PHOTO_EDITING_SIGNATURES:
+        if editor_sig in software:
+            flags.append(f"Graphic editing software watermark found in EXIF: '{exif_tags.get('Software')}'")
+            is_editing_software_detected = True
+            break
+
+    # Check for screenshot indicators: missing camera EXIF + exact common display dimensions
+    orig_w, orig_h = image.size
+    is_common_screen_res = (orig_w, orig_h) in [
+        (1920, 1080), (1080, 1920), (1366, 768), (1440, 900), (2560, 1440), (1170, 2532), (1284, 2778)
+    ]
+    if not has_camera_exif and is_common_screen_res:
+        flags.append(f"Image geometry ({orig_w}x{orig_h}) and absent EXIF indicate a digital screenshot rather than physical document capture")
+
+    # 5. Camera Sensor Physical Noise vs Synthetic Flatness
     entropy = calculate_image_entropy(image)
     if entropy < 4.5:
         flags.append(f"Abnormally low visual entropy ({entropy}); potential blank or rendered graphic")
@@ -123,6 +176,8 @@ def run_layer1_analysis(
     if is_virtual_cam:
         penalty += 50.0
     if is_injection_attack:
+        penalty += 40.0
+    if is_editing_software_detected:
         penalty += 40.0
     if entropy < 4.5:
         penalty += 20.0
@@ -143,8 +198,11 @@ def run_layer1_analysis(
             "is_emulator": is_emulator,
             "is_virtual_camera": is_virtual_cam,
             "is_injection_attack": is_injection_attack,
+            "is_editing_software_detected": is_editing_software_detected,
+            "has_camera_exif": has_camera_exif,
             "timestamp_skew_seconds": round(timestamp_skew, 2),
             "client_entropy_score": round(integrity_score, 1),
+            "exif_metadata": exif_tags if exif_tags else None,
             "flags": flags,
         },
     }

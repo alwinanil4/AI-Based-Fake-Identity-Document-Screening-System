@@ -60,29 +60,45 @@ def get_ai_detector(
 
     model = build_efficientnet_detector()
 
-    if weights_path and os.path.exists(weights_path):
+    # Search for weights file: specified path -> docshield_best_model.pth -> fallback
+    target_weights_path = weights_path
+    if not target_weights_path or not os.path.exists(target_weights_path):
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        candidate_pths = [
+            os.path.join(cur_dir, "weights", "docshield_best_model.pth"),
+            os.path.join(cur_dir, "weights", "efficientnet_b0_docshield.pth"),
+        ]
+        for cand in candidate_pths:
+            if os.path.exists(cand):
+                target_weights_path = cand
+                break
+
+    if target_weights_path and os.path.exists(target_weights_path):
         if expected_sha256:
-            actual_hash = compute_file_sha256(weights_path)
+            actual_hash = compute_file_sha256(target_weights_path)
             if actual_hash.lower() != expected_sha256.lower():
                 raise SecurityError(
-                    f"Model integrity verification failed for {weights_path}! Hash mismatch."
+                    f"Model integrity verification failed for {target_weights_path}! Hash mismatch."
                 )
 
-        logger.info("Loading EfficientNet weights from %s (weights_only=True)", weights_path)
+        logger.info("Loading EfficientNet weights from %s (weights_only=True)", target_weights_path)
         try:
             # STRICT: weights_only=True guards against pickle RCE exploits
-            checkpoint = torch.load(weights_path, map_location="cpu", weights_only=True)
+            checkpoint = torch.load(target_weights_path, map_location="cpu", weights_only=True)
             if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
                 model.load_state_dict(checkpoint["state_dict"])
             elif isinstance(checkpoint, dict):
                 model.load_state_dict(checkpoint)
+            elif isinstance(checkpoint, torch.nn.Module):
+                model = checkpoint
             else:
                 logger.warning("Unexpected checkpoint structure, initializing default weights.")
         except Exception as e:
             logger.error("Failed loading model weights safely: %s", str(e))
     else:
-        logger.info("No custom model weights found at %s. Running with initialized backbone.", weights_path)
+        logger.info("No custom model weights found. Running with initialized backbone.")
 
     model.eval()
     _MODEL_INSTANCE = model
     return _MODEL_INSTANCE
+

@@ -165,7 +165,38 @@ export default function VerificationResult() {
       </div>
 
       {/* Classification Banner */}
-      <VerificationStatus status={record.status} size="banner" showDescription={true} />
+      <VerificationStatus status={record.status || record.verdict} size="banner" showDescription={true} />
+
+      {/* Reason Tags Highlight Bar */}
+      {record.reason_tags && record.reason_tags.length > 0 && (
+        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Forensic Evidence Reason Tags
+            </span>
+            <span className="text-[10px] font-mono text-slate-500">
+              Aggregated across 4 layers
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {record.reason_tags.map((tag, idx) => (
+              <span
+                key={idx}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 ${
+                  isFake
+                    ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    : isSuspicious
+                    ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                <span>{tag}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Executive Summary Rationale */}
       <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
@@ -173,7 +204,7 @@ export default function VerificationResult() {
           AI Verdict & Forensic Explanation
         </p>
         <p className="text-sm text-slate-200 leading-relaxed font-medium">
-          {record.verdictSummary}
+          {record.verdictSummary || `Document screened across 4 parallel forensic layers. Classified as ${record.status?.toUpperCase() || record.verdict?.toUpperCase()} with ${record.confidence || 90}% confidence.`}
         </p>
       </div>
 
@@ -183,13 +214,16 @@ export default function VerificationResult() {
         <div className="lg:col-span-5 space-y-6">
           <DocumentPreview
             documentType={record.documentType}
-            documentName={record.documentName}
-            status={record.status}
+            documentName={record.documentName || record.filename}
+            status={record.status || record.verdict}
             anomalies={record.anomalies}
+            heatmapBase64={record.heatmap_base64 || record.heatmap}
+            originalImageUrl={record.imageUrl || record.thumbnail_base64}
           />
 
           {/* Risk Score Meter */}
-          <RiskScore score={record.riskScore} />
+          <RiskScore score={record.riskScore ?? (100 - (record.confidence || 50))} />
+
 
           {/* Officer Decision Action Panel */}
           <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3 print:hidden">

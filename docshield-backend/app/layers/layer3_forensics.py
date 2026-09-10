@@ -26,14 +26,18 @@ class ErrorLevelAnalysis:
         Returns:
             Tuple of (ela_anomaly_score, ela_heatmap_mask_uint8)
         """
+        # Ensure clean RGB format
+        clean_img = image.convert("RGB")
+        clean_img.load()
+
         # Save to buffer at known quality
         buffer = io.BytesIO()
-        image.save(buffer, format="JPEG", quality=quality)
+        clean_img.save(buffer, format="JPEG", quality=quality)
         buffer.seek(0)
-        recompressed = Image.open(buffer)
+        with Image.open(buffer) as recompressed:
+            recompressed.load()
+            diff = ImageChops.difference(clean_img, recompressed)
 
-        # Compute difference between original and recompressed
-        diff = ImageChops.difference(image, recompressed)
 
         # Scale difference to visualize and score
         extrema = diff.getextrema()
@@ -155,10 +159,13 @@ class FrequencyForensics:
 
 def run_layer3_analysis(image: Image.Image) -> Dict[str, Any]:
     """Runs all classical and spectral image forensic detectors in Layer 3."""
+    image = image.convert("RGB")
+    image.load()
     image_np = np.array(image)
 
     # 1. Error Level Analysis
     ela_score, ela_mask = ErrorLevelAnalysis.compute_ela(image)
+
 
     # 2. Copy-Move Forgery Detection
     copy_move_detected, matches_count, clone_points = CopyMoveDetector.detect_clones(image_np)
@@ -181,6 +188,13 @@ def run_layer3_analysis(image: Image.Image) -> Dict[str, Any]:
     if freq_score >= 45.0:
         anomalies.append(f"Unnatural frequency spectrum / GAN artifact peaks detected (score: {freq_score})")
 
+    # Combine localized anomalies into unified forensic mask
+    forensic_mask = np.copy(ela_mask)
+    if copy_move_detected and clone_points:
+        for pt1, pt2 in clone_points:
+            cv2.circle(forensic_mask, (int(pt1[0]), int(pt1[1])), 18, 255, -1)
+            cv2.circle(forensic_mask, (int(pt2[0]), int(pt2[1])), 18, 255, -1)
+
     # Composite status
     if splicing_detected or copy_move_detected or freq_score >= 50.0:
         status = "flagged"
@@ -198,5 +212,5 @@ def run_layer3_analysis(image: Image.Image) -> Dict[str, Any]:
         "frequency_anomaly_score": freq_score,
         "photo_splicing_detected": splicing_detected,
         "anomalies": anomalies,
-        "ela_mask": ela_mask,
+        "ela_mask": forensic_mask,
     }

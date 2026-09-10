@@ -206,13 +206,13 @@ def execute_parallel_analysis(
 
     # 4. Final Verdict Determination
     if deterministic_fake or composite_forgery_score >= 58.0:
-        verdict = "fake"
+        verdict = "Fake"
         overall_confidence = max(88.0, composite_forgery_score)
     elif composite_forgery_score >= 32.0 or len(reason_tags) > 0:
-        verdict = "suspicious"
+        verdict = "Suspicious"
         overall_confidence = round(max(composite_forgery_score, 100.0 - composite_forgery_score), 1)
     else:
-        verdict = "genuine"
+        verdict = "Genuine"
         overall_confidence = round(100.0 - composite_forgery_score, 1)
         if not reason_tags:
             reason_tags.append("All structural, forensic, and biometric security checks passed")
@@ -222,7 +222,7 @@ def execute_parallel_analysis(
     ela_mask = res_l3.get("ela_mask")
     heatmap_data_url = generate_heatmap_overlay(image, cam_mask=cam_mask, ela_mask=ela_mask)
 
-    # 6. Bundle results into standard schema
+    # 6. Bundle results into standard schema + raw dicts
     bundle = LayerResultsBundle(
         layer1_behavioral=Layer1BehavioralResult(
             status=res_l1["status"],
@@ -261,11 +261,61 @@ def execute_parallel_analysis(
         ),
     )
 
+    clean_layer_results = {
+        "layer1": {
+            "name": "Behavioral & Device Signals",
+            "status": res_l1["status"],
+            "confidence": res_l1["confidence"],
+            "details": res_l1.get("details", {}),
+        },
+        "layer2": {
+            "name": "OCR & Structural Validation",
+            "status": res_l2["status"],
+            "confidence": res_l2["confidence"],
+            "document_type": res_l2["document_type"],
+            "fields": res_l2.get("fields", {}),
+            "mrz_detected": res_l2["mrz_detected"],
+            "mrz_checksum_valid": res_l2["mrz_checksum_valid"],
+            "barcode_detected": res_l2["barcode_detected"],
+            "cross_check_matches": res_l2["cross_check_matches"],
+            "anomalies": res_l2["anomalies"],
+        },
+        "layer3": {
+            "name": "Image Forensics",
+            "status": res_l3["status"],
+            "confidence": res_l3["confidence"],
+            "ela_anomaly_score": res_l3["ela_anomaly_score"],
+            "copy_move_detected": res_l3["copy_move_detected"],
+            "copy_move_matches_count": res_l3["copy_move_matches_count"],
+            "frequency_anomaly_score": res_l3["frequency_anomaly_score"],
+            "photo_splicing_detected": res_l3["photo_splicing_detected"],
+            "anomalies": res_l3["anomalies"],
+        },
+        "layer4": {
+            "name": "AI / Deep Learning Detection",
+            "status": res_l4["status"],
+            "confidence": res_l4["confidence"],
+            "model": res_l4["model"],
+            "forgery_probability": res_l4["forgery_probability"],
+            "genuine_probability": res_l4["genuine_probability"],
+            "verdict": res_l4.get("verdict", "fake" if res_l4["forgery_probability"] >= 60 else "genuine"),
+        },
+        # Backward compatibility aliases
+        "layer1_behavioral": bundle.layer1_behavioral.model_dump(),
+        "layer2_ocr": bundle.layer2_ocr.model_dump(),
+        "layer3_forensics": bundle.layer3_forensics.model_dump(),
+        "layer4_ai_detection": bundle.layer4_ai_detection.model_dump(),
+    }
+
+    elapsed = round(elapsed_ms, 2)
+
     return {
         "verdict": verdict,
         "confidence": round(overall_confidence, 1),
-        "heatmap": heatmap_data_url,
         "reason_tags": reason_tags,
-        "layer_results": bundle,
-        "analysis_time_ms": round(elapsed_ms, 2),
+        "heatmap": heatmap_data_url,
+        "heatmap_base64": heatmap_data_url,
+        "layer_results": clean_layer_results,
+        "analysis_time_ms": elapsed,
+        "processing_time_ms": elapsed,
     }
