@@ -64,8 +64,8 @@ def detect_mime_from_magic_bytes(header_bytes: bytes) -> str:
     if header_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
 
-    # Check JPEG signatures
-    if header_bytes.startswith(b"\xFF\xD8\xFF"):
+    # Check JPEG signatures (SOI marker 0xFF 0xD8)
+    if header_bytes.startswith(b"\xFF\xD8"):
         return "image/jpeg"
 
     raise FileValidationError(
@@ -76,7 +76,7 @@ def detect_mime_from_magic_bytes(header_bytes: bytes) -> str:
 def validate_and_reencode_image(
     raw_stream: io.BytesIO,
     max_dimension: int = 8000,
-    max_size_bytes: int = 10 * 1024 * 1024,
+    max_size_bytes: int = 16 * 1024 * 1024,
 ) -> Tuple[Image.Image, bytes, str]:
     """Validates raw image data and produces a safe, re-encoded clean image.
 
@@ -122,7 +122,7 @@ def validate_and_reencode_image(
 
             # Check format reported by Pillow parser
             pillow_format = (img.format or "").upper()
-            if pillow_format not in {"JPEG", "PNG", "MPO"}:
+            if pillow_format not in {"JPEG", "JPG", "PNG", "MPO"}:
                 raise FileValidationError(
                     f"Disallowed image format '{pillow_format}' detected by parser."
                 )

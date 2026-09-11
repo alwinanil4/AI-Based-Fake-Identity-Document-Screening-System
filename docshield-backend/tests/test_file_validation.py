@@ -79,3 +79,16 @@ def test_decompression_bomb_rejected():
 
     with pytest.raises(FileValidationError, match="Decompression bomb defense"):
         validate_and_reencode_image(huge_stream, max_dimension=8000)
+
+
+def test_jpg_and_jpeg_variants_accepted():
+    """Confirms both .jpg and .jpeg standard camera images are accepted."""
+    for fmt in ["JPEG", "PNG"]:
+        stream = create_test_image(fmt, size=(1920, 1080))
+        clean_img, clean_bytes, verified_fmt = validate_and_reencode_image(
+            stream, max_size_bytes=16 * 1024 * 1024
+        )
+        assert verified_fmt == "JPEG"
+        assert clean_img.size == (1920, 1080)
+        assert len(clean_bytes) > 0
+

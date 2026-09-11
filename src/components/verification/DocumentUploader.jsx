@@ -6,17 +6,16 @@ import {
   AlertCircle, 
   X, 
   RefreshCw, 
-  Sparkles, 
-  ArrowRight,
-  ShieldAlert
+  ArrowRight
 } from 'lucide-react'
 import { DEMO_PRESETS } from '../../services/api'
 import { formatBytes } from '../../utils/helpers'
 
-const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png']
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg']
+const MAX_FILE_SIZE = 16 * 1024 * 1024 // 16MB
 
-export default function DocumentUploader({ onStartVerification, isProcessing, scanningStage }) {
+export default function DocumentUploader({ onStartVerification, isProcessing }) {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [selectedDocType, setSelectedDocType] = useState('Auto-Detect')
@@ -30,13 +29,18 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
     setErrorMessage('')
     if (!file) return false
 
-    if (!SUPPORTED_FORMATS.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|pdf)$/i)) {
-      setErrorMessage('Invalid file format. Please upload JPG, PNG, or PDF identity documents.')
+    const fileName = (file.name || '').toLowerCase()
+    const hasValidExt = ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext))
+    const fileMime = (file.type || '').toLowerCase()
+    const hasValidMime = ALLOWED_MIME_TYPES.includes(fileMime)
+
+    if (!hasValidExt && !hasValidMime) {
+      setErrorMessage('Please upload a JPG or PNG image file (.jpg, .jpeg, or .png).')
       return false
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMessage(`File exceeds 10MB limit (${formatBytes(file.size)}). Please upload a smaller file.`)
+      setErrorMessage(`File exceeds the 16MB limit (${formatBytes(file.size)}). Please choose a smaller image.`)
       return false
     }
 
@@ -48,11 +52,7 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
     if (file && handleFileValidation(file)) {
       setSelectedFile(file)
       setSelectedPreset(null)
-      if (file.type.startsWith('image/')) {
-        setPreviewUrl(URL.createObjectURL(file))
-      } else {
-        setPreviewUrl(null)
-      }
+      setPreviewUrl(URL.createObjectURL(file))
     }
   }
 
@@ -63,11 +63,7 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
     if (file && handleFileValidation(file)) {
       setSelectedFile(file)
       setSelectedPreset(null)
-      if (file.type.startsWith('image/')) {
-        setPreviewUrl(URL.createObjectURL(file))
-      } else {
-        setPreviewUrl(null)
-      }
+      setPreviewUrl(URL.createObjectURL(file))
     }
   }
 
@@ -114,10 +110,9 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
     })
   }
 
-
   const handleTriggerSubmit = () => {
     if (!selectedFile && !selectedPreset) {
-      setErrorMessage('Please select a document or use a quick demo preset to continue.')
+      setErrorMessage('Please choose a document image or select one of the test samples.')
       return
     }
 
@@ -125,65 +120,65 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
       file: selectedFile,
       docType: selectedDocType,
       presetId: selectedPreset?.id,
-      officerNotes
+      officerNotes,
+      previewUrl
     })
   }
 
   return (
     <div className="space-y-6">
-      {/* Quick Demo Presets Banner for SIH Evaluator */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-slate-900 border border-blue-900/40">
-        <div className="flex items-center gap-2 mb-2.5">
-          <Sparkles className="w-4 h-4 text-blue-400" />
-          <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-            SIH Judge & Evaluator Demo Presets
+      {/* Sample Document Presets */}
+      <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-card">
+        <div className="flex items-center gap-2 mb-2">
+          <FileText className="w-5 h-5 text-blue-600" />
+          <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+            Test Samples for Evaluation
           </span>
-          <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
-            One-Click Test Cases
+          <span className="text-sm bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono font-medium">
+            4 Samples
           </span>
         </div>
-        <p className="text-xs text-slate-400 mb-3">
-          Select a sample preset to test genuine, altered, or counterfeit identity documents instantly:
+        <p className="text-sm text-gray-600 mb-4">
+          Select a sample document to test the screening pipeline immediately:
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {DEMO_PRESETS.map((preset) => {
             const isCurrent = selectedPreset?.id === preset.id
+            const isGen = preset.badgeColor === 'emerald'
             return (
               <button
                 key={preset.id}
                 type="button"
                 onClick={() => handleSelectPreset(preset)}
-                className={`p-3 rounded-lg border text-left transition-all ${
+                className={`p-3.5 rounded-lg border text-left transition-colors duration-150 ${
                   isCurrent
-                    ? 'bg-blue-600/20 border-blue-500 text-white shadow-sm'
-                    : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700'
+                    ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-100'
+                    : 'bg-gray-50 border-gray-200 hover:bg-white hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold">{preset.docType}</span>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-semibold text-gray-900">{preset.docType}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                      preset.badgeColor === 'emerald'
-                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
-                        : preset.badgeColor === 'amber'
-                        ? 'bg-amber-950 text-amber-300 border border-amber-500/30'
-                        : 'bg-rose-950 text-rose-300 border border-rose-500/30'
+                    className={`text-sm px-2 py-0.5 rounded font-semibold border ${
+                      isGen
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-red-50 text-red-800 border-red-200'
                     }`}
                   >
                     {preset.badge}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 truncate">{preset.label}</p>
+                <p className="text-sm text-gray-600 truncate">{preset.label}</p>
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Document Type Selector */}
+      {/* Document Standard Filter */}
       <div className="space-y-2">
-        <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
-          Document Classification Standard
+        <label className="text-sm font-bold text-gray-800 uppercase tracking-wide block">
+          Document Type Standard
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
           {['Auto-Detect', 'Aadhaar', 'PAN Card', 'Voter ID', 'Driving License', 'Passport'].map((type) => (
@@ -191,10 +186,10 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
               key={type}
               type="button"
               onClick={() => setSelectedDocType(type)}
-              className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all ${
+              className={`py-2 px-3 rounded-lg text-sm font-medium border transition-colors duration-150 ${
                 selectedDocType === type
-                  ? 'bg-blue-600/20 border-blue-500 text-blue-300 font-semibold'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  ? 'bg-blue-50 border-blue-600 text-blue-700 font-bold'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
               {type}
@@ -210,112 +205,112 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 ${
+          className={`relative border-2 border-dashed rounded-xl p-8 sm:p-10 text-center cursor-pointer transition-colors duration-150 ${
             dragOver
-              ? 'border-blue-500 bg-blue-950/20 scale-[0.99]'
-              : 'border-slate-800 bg-[#0d1322]/50 hover:bg-slate-900/40 hover:border-slate-700'
+              ? 'border-blue-600 bg-blue-50/50'
+              : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50/70 shadow-card'
           }`}
         >
           <input
             ref={fileInputRef}
             type="file"
-            accept=".jpg,.jpeg,.png,.pdf"
+            accept="image/jpeg,image/png,image/jpg,.jpg,.jpeg,.png"
             onChange={handleFileChange}
             className="hidden"
           />
 
-          <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-            <UploadCloud className="w-7 h-7" />
+          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-3">
+            <UploadCloud className="w-6 h-6" />
           </div>
 
-          <h3 className="text-base font-semibold text-white mb-1">
-            Drag and drop document image or PDF
+          <h3 className="text-base font-bold text-gray-900 mb-1">
+            Drag and drop document image here
           </h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4 leading-relaxed">
-            Support high-resolution Aadhaar, PAN, Voter ID, DL, and Passport scans for deep forensic inspection.
+          <p className="text-sm text-gray-600 max-w-sm mx-auto mb-4 leading-relaxed">
+            Upload Aadhaar, PAN, Passport, Voter ID, or Driving License image.
           </p>
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/80 border border-slate-700 text-xs font-semibold text-slate-200 hover:bg-slate-700 transition-colors">
-            <span>Browse Computer Files</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+            <span>Browse Computer</span>
           </div>
 
-          <p className="text-[11px] text-slate-500 mt-4">
-            Accepted: JPG, PNG, PDF • Maximum file size: 10MB
+          <p className="text-sm text-gray-500 mt-4">
+            Supports JPG, JPEG, and PNG. Maximum file size: 16MB.
           </p>
         </div>
       ) : (
-        /* Selected File Preview Box */
-        <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4">
+        /* Selected File Card */
+        <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-card space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Selected Document for Screening
+            <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+              Selected Document
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 text-sm font-medium transition-colors duration-150"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Replace File</span>
+                <span>Replace</span>
               </button>
               <button
                 type="button"
                 onClick={handleRemoveFile}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 transition-colors"
+                className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors duration-150"
                 title="Remove file"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-950/70 border border-slate-800/80">
+          <div className="flex items-center gap-4 p-3.5 rounded-lg bg-gray-50 border border-gray-200">
             {previewUrl ? (
               <img
                 src={previewUrl}
-                alt="Document Thumbnail"
-                className="w-16 h-16 rounded-lg object-cover border border-slate-700"
+                alt="Document Preview"
+                className="w-16 h-16 rounded-md object-cover border border-gray-200 bg-white"
               />
             ) : (
-              <div className="w-16 h-16 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-                <FileText className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+                <FileText className="w-7 h-7" />
               </div>
             )}
 
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{selectedFile.name}</p>
-              <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                <span>Size: {formatBytes(selectedFile.size || 2450000)}</span>
+              <p className="text-sm font-bold text-gray-900 truncate">{selectedFile.name}</p>
+              <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                <span>{formatBytes(selectedFile.size || 2450000)}</span>
                 <span>•</span>
-                <span className="text-blue-400 font-medium">Type: {selectedDocType}</span>
+                <span className="text-blue-700 font-medium">{selectedDocType}</span>
                 {selectedPreset && (
                   <>
                     <span>•</span>
-                    <span className="text-emerald-400 font-medium">Preset Loaded</span>
+                    <span className="text-emerald-800 font-medium">Test Sample</span>
                   </>
                 )}
               </div>
             </div>
 
-            <div className="hidden sm:flex items-center gap-1 text-emerald-400 text-xs font-medium">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Ready for AI Scan</span>
+            <div className="hidden sm:flex items-center gap-1.5 text-emerald-800 text-sm font-semibold">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <span>Ready</span>
             </div>
           </div>
 
-          {/* Officer Verification Notes (Optional) */}
+          {/* Inspection Notes */}
           <div className="space-y-1.5">
-            <label className="text-xs text-slate-400 font-medium flex items-center justify-between">
-              <span>Checkpoint / Officer Notes (Optional)</span>
-              <span className="text-[11px] text-slate-500">Auto-logged in SIH audit trail</span>
+            <label className="text-sm text-gray-700 font-medium flex items-center justify-between">
+              <span>Verification Notes (Optional)</span>
+              <span className="text-gray-500">Saved to audit record</span>
             </label>
             <input
               type="text"
               value={officerNotes}
               onChange={(e) => setOfficerNotes(e.target.value)}
-              placeholder="e.g. Passenger presented document at Checkpoint B-2. Physical laminate felt slightly thin."
-              className="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder="e.g. Intake checkpoint verification at primary desk."
+              className="w-full px-3.5 py-2 rounded-lg bg-white border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-600 transition-colors duration-150"
             />
           </div>
         </div>
@@ -323,35 +318,26 @@ export default function DocumentUploader({ onStartVerification, isProcessing, sc
 
       {/* Error Banner */}
       {errorMessage && (
-        <div className="p-3.5 rounded-lg bg-rose-950/40 border border-rose-500/40 flex items-center gap-3 text-xs text-rose-300">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+        <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 flex items-center gap-3 text-sm text-red-800">
+          <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Start Verification Action Button */}
+      {/* Submit Button */}
       <div>
         <button
           type="button"
           onClick={handleTriggerSubmit}
           disabled={isProcessing || (!selectedFile && !selectedPreset)}
-          className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+          className={`w-full py-3.5 px-6 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors duration-150 ${
             isProcessing || (!selectedFile && !selectedPreset)
-              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
-              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-600/25 active:scale-[0.99]'
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-card'
           }`}
         >
-          {isProcessing ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin text-blue-300" />
-              <span>{scanningStage || 'Running Neural Vision Screening...'}</span>
-            </>
-          ) : (
-            <>
-              <span>Execute AI Document Screening</span>
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
+          <span>Analyze Document</span>
+          <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>

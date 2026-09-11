@@ -28,8 +28,12 @@ class ExtractedDocumentFields(BaseModel):
     document_number: Optional[str] = None
     holder_name: Optional[str] = None
     date_of_birth: Optional[str] = None
+    gender: Optional[str] = None
+    address: Optional[str] = None
+    father_name: Optional[str] = None
     expiry_date: Optional[str] = None
     raw_text_snippet: Optional[str] = None
+    raw_lines: List[str] = Field(default_factory=list)
 
 
 class Layer2OCRResult(BaseModel):

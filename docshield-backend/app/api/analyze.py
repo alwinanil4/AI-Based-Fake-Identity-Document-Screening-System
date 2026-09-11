@@ -92,7 +92,7 @@ def analyze_document():
         form_data=dict(request.form),
         tesseract_cmd=tesseract_cmd,
         model_weights_path=weights_path,
-        timeout_seconds=8.5,
+        timeout_seconds=25.0,
     )
 
     now_iso = datetime.now(timezone.utc).isoformat()

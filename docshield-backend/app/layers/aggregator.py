@@ -88,9 +88,9 @@ def execute_parallel_analysis(
     form_data: Optional[Dict[str, Any]] = None,
     tesseract_cmd: str = "",
     model_weights_path: str = "",
-    timeout_seconds: float = 8.5,
+    timeout_seconds: float = 25.0,
 ) -> Dict[str, Any]:
-    """Executes Layer 1, 2, 3, and 4 in parallel within the strict ~10s SLA."""
+    """Executes Layer 1, 2, 3, and 4 in parallel within the SLA."""
     start_time = time.perf_counter()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -103,17 +103,17 @@ def execute_parallel_analysis(
         try:
             res_l1 = future_l1.result(timeout=timeout_seconds)
         except Exception as e:
-            logger.error("Layer 1 execution failed: %s", str(e))
+            logger.error("Layer 1 execution failed: %s", str(e), exc_info=True)
             res_l1 = {
                 "status": "inconclusive",
                 "confidence": 50.0,
-                "details": {"is_emulator": False, "is_virtual_camera": False, "is_injection_attack": False, "timestamp_skew_seconds": 0.0, "client_entropy_score": 50.0, "flags": ["Layer 1 timeout"]},
+                "details": {"is_emulator": False, "is_virtual_camera": False, "is_injection_attack": False, "timestamp_skew_seconds": 0.0, "client_entropy_score": 50.0, "flags": ["Layer 1 timeout/error"]},
             }
 
         try:
             res_l2 = future_l2.result(timeout=timeout_seconds)
         except Exception as e:
-            logger.error("Layer 2 execution failed: %s", str(e))
+            logger.error("Layer 2 execution failed: %s", str(e), exc_info=True)
             res_l2 = {
                 "status": "inconclusive",
                 "confidence": 50.0,
@@ -124,7 +124,7 @@ def execute_parallel_analysis(
                 "mrz_format": None,
                 "barcode_detected": False,
                 "cross_check_matches": True,
-                "anomalies": ["Layer 2 processing error"],
+                "anomalies": ["Layer 2 processing error: " + (str(e) or "Timeout")],
             }
 
         try:
@@ -187,7 +187,12 @@ def execute_parallel_analysis(
     for flag in res_l1.get("details", {}).get("flags", []):
         reason_tags.append(f"Behavioral: {flag}")
 
-    if res_l4.get("forgery_probability", 0.0) >= 65.0:
+    raw_ai_class = res_l4.get("raw_class")
+    if raw_ai_class == "ai_generated":
+        reason_tags.append(f"AI Detection: Vision model classified document as AI-Generated synthetic counterfeit ({res_l4.get('confidence', 0)}% confidence)")
+    elif raw_ai_class == "tampered":
+        reason_tags.append(f"AI Detection: Vision model detected localized digital tampering ({res_l4.get('confidence', 0)}% confidence)")
+    elif res_l4.get("forgery_probability", 0.0) >= 65.0:
         reason_tags.append(f"AI Detection: Neural network flagged forgery ({res_l4['forgery_probability']}%)")
 
     # 3. Weighted Scoring Calculation
@@ -217,10 +222,12 @@ def execute_parallel_analysis(
         if not reason_tags:
             reason_tags.append("All structural, forensic, and biometric security checks passed")
 
-    # 5. Generate Heatmap Overlay
-    cam_mask = res_l4.get("heatmap_mask")
-    ela_mask = res_l3.get("ela_mask")
-    heatmap_data_url = generate_heatmap_overlay(image, cam_mask=cam_mask, ela_mask=ela_mask)
+    # 5. Generate Heatmap Overlay (Prioritize real Grad-CAM from Layer 4)
+    heatmap_data_url = res_l4.get("heatmap_base64")
+    if not heatmap_data_url:
+        cam_mask = res_l4.get("heatmap_mask")
+        ela_mask = res_l3.get("ela_mask")
+        heatmap_data_url = generate_heatmap_overlay(image, cam_mask=cam_mask, ela_mask=ela_mask)
 
     # 6. Bundle results into standard schema + raw dicts
     bundle = LayerResultsBundle(
@@ -299,6 +306,9 @@ def execute_parallel_analysis(
             "forgery_probability": res_l4["forgery_probability"],
             "genuine_probability": res_l4["genuine_probability"],
             "verdict": res_l4.get("verdict", "fake" if res_l4["forgery_probability"] >= 60 else "genuine"),
+            "predicted_class": res_l4.get("raw_class") or res_l4.get("details", {}).get("predicted_class"),
+            "probabilities": res_l4.get("probabilities") or res_l4.get("details", {}).get("class_probabilities"),
+            "details": res_l4.get("details", {}),
         },
         # Backward compatibility aliases
         "layer1_behavioral": bundle.layer1_behavioral.model_dump(),

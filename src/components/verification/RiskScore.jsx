@@ -12,22 +12,22 @@ export default function RiskScore({ score = 0, size = 'md' }) {
   if (size === 'compact') {
     return (
       <div className="flex items-center gap-2">
-        <div className="w-16 bg-slate-800 rounded-full h-2 overflow-hidden">
+        <div className="w-16 bg-gray-100 rounded-full h-2 overflow-hidden border border-gray-200">
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full transition-all duration-200"
             style={{
               width: `${Math.min(100, Math.max(0, score))}%`,
               backgroundColor: riskInfo.fillColor
             }}
           />
         </div>
-        <span className={`text-xs font-bold ${riskInfo.color}`}>{score}%</span>
+        <span className={`text-sm font-mono font-bold ${riskInfo.color}`}>{score}%</span>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
+    <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-white border border-gray-200 shadow-card text-center">
       {/* SVG Radial Gauge */}
       <div className="relative w-28 h-28 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
@@ -36,8 +36,8 @@ export default function RiskScore({ score = 0, size = 'md' }) {
             cx="48"
             cy="48"
             r={radius}
-            stroke="#1f2937"
-            strokeWidth="8"
+            stroke="#F3F4F6"
+            strokeWidth="7"
             fill="transparent"
           />
           {/* Active Risk Stroke */}
@@ -46,30 +46,30 @@ export default function RiskScore({ score = 0, size = 'md' }) {
             cy="48"
             r={radius}
             stroke={riskInfo.fillColor}
-            strokeWidth="8"
+            strokeWidth="7"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             fill="transparent"
-            className="transition-all duration-1000 ease-out"
+            className="transition-all duration-200 ease-out"
           />
         </svg>
 
         {/* Center Score */}
         <div className="absolute flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-white tracking-tight">{score}</span>
-          <span className="text-[10px] uppercase font-bold text-slate-400">/ 100</span>
+          <span className="text-3xl font-extrabold font-mono text-gray-900 tracking-tight">{score}</span>
+          <span className="text-sm uppercase font-mono font-semibold text-gray-500">/ 100</span>
         </div>
       </div>
 
       {/* Risk Badge */}
       <div className="mt-3">
-        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${riskInfo.bgClass}`}>
+        <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold border ${riskInfo.bgClass}`}>
           {riskInfo.level}
         </span>
       </div>
 
-      <p className="text-[11px] text-slate-400 mt-2 text-center max-w-xs leading-relaxed">
+      <p className="text-sm text-gray-600 mt-2 text-center max-w-xs leading-relaxed">
         {riskInfo.description}
       </p>
     </div>

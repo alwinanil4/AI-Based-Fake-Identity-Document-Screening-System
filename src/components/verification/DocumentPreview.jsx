@@ -3,12 +3,10 @@ import {
   Eye, 
   ZoomIn, 
   ZoomOut, 
-  AlertCircle, 
   Layers, 
-  CheckCircle2, 
   Columns, 
-  Sparkles,
-  Maximize2
+  CheckCircle2, 
+  AlertCircle
 } from 'lucide-react'
 
 export default function DocumentPreview({ 
@@ -17,7 +15,8 @@ export default function DocumentPreview({
   status, 
   anomalies = [],
   heatmapBase64 = null,
-  originalImageUrl = null
+  originalImageUrl = null,
+  showHeatmapInitially = true
 }) {
   const [zoomLevel, setZoomLevel] = useState(1)
   const [viewMode, setViewMode] = useState('side-by-side') // 'side-by-side' | 'heatmap' | 'original'
@@ -38,7 +37,6 @@ export default function DocumentPreview({
     if (originalImageUrl) {
       return originalImageUrl
     }
-    // Fallback to pre-rendered sample documents based on document name or type
     const lower = (documentName || documentType || '').toLowerCase()
     if (lower.includes('passport')) return '/sample_documents/sample_genuine_passport.png'
     if (lower.includes('aadhaar')) return '/sample_documents/sample_forged_aadhaar_dob_tamper.jpg'
@@ -51,47 +49,47 @@ export default function DocumentPreview({
   const heatmapSrc = heatmapBase64 || getDisplayImage(true)
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-[#0d1322] overflow-hidden flex flex-col shadow-xl">
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden flex flex-col shadow-card">
       {/* Top Toolbar */}
-      <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 text-sm">
         <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue-400 shrink-0" />
-          <span className="font-bold text-slate-200">Forensic Vision Inspector</span>
-          <span className="text-slate-600">|</span>
-          <span className="text-slate-400 font-mono text-[11px] truncate max-w-[160px]">{documentName}</span>
+          <Eye className="w-4 h-4 text-blue-600 shrink-0" />
+          <span className="font-bold text-gray-900">Document Visual Evidence</span>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-600 font-mono text-sm truncate max-w-[180px]">{documentName}</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* View Mode Selector */}
-          <div className="flex bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/60">
+          <div className="flex bg-white p-0.5 rounded-lg border border-gray-200 shadow-card">
             <button
               onClick={() => setViewMode('side-by-side')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150 ${
                 viewMode === 'side-by-side'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:text-gray-900'
               }`}
             >
-              <Columns className="w-3.5 h-3.5" />
+              <Columns className="w-4 h-4" />
               <span className="hidden sm:inline">Side-by-Side</span>
             </button>
             <button
               onClick={() => setViewMode('heatmap')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150 ${
                 viewMode === 'heatmap'
-                  ? 'bg-rose-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:text-gray-900'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Forensic Heatmap</span>
+              <Layers className="w-4 h-4" />
+              <span>Grad-CAM Map</span>
             </button>
             <button
               onClick={() => setViewMode('original')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-semibold transition-colors duration-150 ${
                 viewMode === 'original'
-                  ? 'bg-slate-700 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:text-gray-900'
               }`}
             >
               <span>Original</span>
@@ -99,160 +97,148 @@ export default function DocumentPreview({
           </div>
 
           {/* Zoom Controls */}
-          <div className="flex items-center bg-slate-800/80 rounded-lg border border-slate-700/60 overflow-hidden">
+          <div className="flex items-center bg-white rounded-lg border border-gray-200 shadow-card overflow-hidden text-sm">
             <button
               onClick={handleZoomOut}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-150"
               title="Zoom Out"
             >
-              <ZoomOut className="w-3.5 h-3.5" />
+              <ZoomOut className="w-4 h-4" />
             </button>
             <button
               onClick={resetZoom}
-              className="px-2 py-1 text-[10px] text-slate-300 font-mono hover:bg-slate-700/60"
+              className="px-2.5 py-1 text-sm text-gray-800 font-mono font-semibold hover:bg-gray-50"
               title="Reset Zoom"
             >
               {Math.round(zoomLevel * 100)}%
             </button>
             <button
               onClick={handleZoomIn}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors duration-150"
               title="Zoom In"
             >
-              <ZoomIn className="w-3.5 h-3.5" />
+              <ZoomIn className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Document Canvas Display */}
-      <div className="relative p-4 sm:p-6 bg-slate-950/80 flex items-center justify-center min-h-[360px] overflow-hidden">
-        {/* Background Grid Pattern */}
-        <div 
-          className="absolute inset-0 opacity-15" 
-          style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '16px 16px' }}
-        />
-
+      <div className="relative p-5 bg-gray-50/60 flex items-center justify-center min-h-[320px] overflow-hidden">
         {/* View Mode: SIDE-BY-SIDE */}
         {viewMode === 'side-by-side' && (
           <div 
-            style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
+            style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.15s ease-out' }}
             className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl z-10"
           >
             {/* Left: Original Document */}
-            <div className="rounded-xl bg-slate-900/90 border border-slate-700/80 overflow-hidden shadow-lg flex flex-col">
-              <div className="px-3 py-2 bg-slate-800/80 border-b border-slate-700/60 flex items-center justify-between text-[11px] font-semibold text-slate-300">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+            <div className="rounded-lg bg-white border border-gray-200 overflow-hidden shadow-card flex flex-col">
+              <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-sm font-bold text-gray-700">
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
                   Original Document
                 </span>
-                <span className="text-[10px] font-mono text-slate-400">INPUT CROP</span>
+                <span className="text-sm font-mono text-gray-500">ORIGINAL</span>
               </div>
-              <div className="p-2 flex-1 flex items-center justify-center bg-black/40">
+              <div className="p-3 flex-1 flex items-center justify-center bg-gray-100/50">
                 <img 
                   src={originalSrc} 
                   alt="Original Document" 
-                  className="w-full h-auto max-h-64 object-contain rounded-lg shadow"
+                  className="w-full h-auto max-h-60 object-contain rounded"
                 />
               </div>
             </div>
 
             {/* Right: Flagged Forensic Heatmap */}
-            <div className="rounded-xl bg-slate-900/90 border border-rose-500/40 overflow-hidden shadow-lg flex flex-col relative">
-              <div className="px-3 py-2 bg-rose-950/40 border-b border-rose-500/40 flex items-center justify-between text-[11px] font-bold text-rose-300">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-                  Flagged Anomalies Heatmap
+            <div className="rounded-lg bg-white border border-gray-200 overflow-hidden shadow-card flex flex-col relative">
+              <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-sm font-bold text-gray-700">
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                  Grad-CAM Activation Map
                 </span>
-                <span className="text-[10px] font-mono uppercase text-rose-300">
+                <span className={`text-sm font-mono font-bold uppercase ${
+                  isGenuine ? 'text-emerald-700' : isSuspicious ? 'text-amber-700' : 'text-red-700'
+                }`}>
                   {status}
                 </span>
               </div>
-              <div className="p-2 flex-1 flex items-center justify-center bg-black/40 relative group">
+              <div className="p-3 flex-1 flex items-center justify-center bg-gray-100/50 relative">
                 <img 
                   src={heatmapSrc} 
                   alt="Forensic Heatmap" 
-                  className="w-full h-auto max-h-64 object-contain rounded-lg shadow filter contrast-105"
+                  className="w-full h-auto max-h-60 object-contain rounded transition-opacity duration-200 opacity-100"
                 />
-                <div className="absolute bottom-3 left-3 right-3 p-1.5 rounded bg-black/75 backdrop-blur-sm border border-slate-700/60 text-[10px] text-slate-300 text-center pointer-events-none">
-                  <span className="text-amber-300 font-semibold">Heatmap Legend:</span> Red/Yellow = High Tamper Spikes • Blue = Unaltered
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* View Mode: FULL FORENSIC HEATMAP */}
+        {/* View Mode: FULL GRAD-CAM HEATMAP */}
         {viewMode === 'heatmap' && (
           <div 
-            style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
-            className="w-full max-w-xl rounded-xl bg-slate-900/90 border border-rose-500/50 overflow-hidden shadow-2xl z-10"
+            style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.15s ease-out' }}
+            className="w-full max-w-xl rounded-xl bg-white border border-gray-200 overflow-hidden shadow-card z-10"
           >
-            <div className="px-3.5 py-2 bg-rose-950/50 border-b border-rose-500/40 flex items-center justify-between text-xs font-bold text-rose-300">
+            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-sm font-bold text-gray-900">
               <span className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-rose-400 animate-pulse" />
-                Grad-CAM & ELA Forensic Heatmap Overlay
+                <Layers className="w-4 h-4 text-blue-600" />
+                Grad-CAM Heatmap Overlay
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-200 border border-rose-500/40">
-                Active Anomaly Map
+              <span className="text-sm font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                Layer 4
               </span>
             </div>
-            <div className="p-3 bg-black/50 flex items-center justify-center">
+            <div className="p-4 bg-gray-100/50 flex items-center justify-center">
               <img 
                 src={heatmapSrc} 
                 alt="Full Forensic Heatmap" 
-                className="w-full h-auto max-h-96 object-contain rounded-lg"
+                className="w-full h-auto max-h-80 object-contain rounded"
               />
             </div>
-            <div className="p-2 bg-slate-900 border-t border-slate-800 text-[11px] text-slate-400 text-center">
-              High-intensity warm regions (red, orange, yellow) pinpoint pixel-level digital tampering and compression edits.
+            <div className="p-3 bg-white border-t border-gray-100 text-sm text-gray-600 text-center">
+              Warm regions (red and yellow) highlight areas where anomalies or alterations were detected.
             </div>
           </div>
         )}
 
-        {/* View Mode: ORIGINAL DOCUMENT ONLY */}
+        {/* View Mode: ORIGINAL DOCUMENT */}
         {viewMode === 'original' && (
           <div 
-            style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.2s ease-out' }}
-            className="w-full max-w-xl rounded-xl bg-slate-900/90 border border-slate-700 overflow-hidden shadow-2xl z-10"
+            style={{ transform: `scale(${zoomLevel})`, transition: 'transform 0.15s ease-out' }}
+            className="w-full max-w-xl rounded-xl bg-white border border-gray-200 overflow-hidden shadow-card z-10"
           >
-            <div className="px-3.5 py-2 bg-slate-800/90 border-b border-slate-700 flex items-center justify-between text-xs font-bold text-slate-200">
-              <span>Original Document Scan</span>
-              <span className="text-[10px] font-mono text-slate-400">UNALTERED IMAGE</span>
+            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-sm font-bold text-gray-900">
+              <span>Original Document Image</span>
+              <span className="text-sm font-mono text-gray-500">RAW IMAGE</span>
             </div>
-            <div className="p-3 bg-black/50 flex items-center justify-center">
+            <div className="p-4 bg-gray-100/50 flex items-center justify-center">
               <img 
                 src={originalSrc} 
                 alt="Original Document" 
-                className="w-full h-auto max-h-96 object-contain rounded-lg"
+                className="w-full h-auto max-h-80 object-contain rounded"
               />
             </div>
           </div>
         )}
       </div>
 
-      {/* Forensic Inspection Footer Summary */}
-      <div className="px-4 py-3 bg-slate-900 border-t border-slate-800 text-xs flex flex-wrap items-center justify-between gap-2">
+      {/* Footer Legend */}
+      <div className="px-4 py-3 bg-white border-t border-gray-200 text-sm flex flex-wrap items-center justify-between gap-2 text-gray-600">
         <div className="flex items-center gap-2">
-          {isSuspicious ? (
+          {isGenuine ? (
             <>
-              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-amber-300 font-medium">Forensic Inconsistencies Flagged for Officer Inspection</span>
-            </>
-          ) : isFake ? (
-            <>
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span className="text-rose-300 font-medium">Critical Forgery Detected Across Analysis Layers</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-emerald-800 font-medium">Uniform compression, clean font baseline, and valid checksums.</span>
             </>
           ) : (
             <>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="text-emerald-400 font-medium">Zero Digital Alterations or Checksum Inconsistencies Detected</span>
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span className="text-gray-800 font-medium">Warm heatmap clusters identify altered visual regions.</span>
             </>
           )}
         </div>
-        <span className="text-[11px] text-slate-500 font-mono">
-          DocShield AI Multi-Layer Forensic Engine
+        <span className="text-sm font-mono text-gray-500 font-semibold">
+          DocShield Inspector
         </span>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Copy, Check, FileCheck } from 'lucide-react'
+import { Copy, Check } from 'lucide-react'
 
 export default function ExtractedDataGrid({ data = {} }) {
   const [copiedKey, setCopiedKey] = React.useState(null)
@@ -21,9 +21,9 @@ export default function ExtractedDataGrid({ data = {} }) {
       case 'issueDate': return 'Date of Issue'
       case 'validity': return 'Validity / Expiry'
       case 'assemblyConstituency': return 'Assembly Constituency'
-      case 'rto': return 'Issuing RTO Authority'
-      case 'mrz1': return 'MRZ Code Line 1'
-      case 'mrz2': return 'MRZ Code Line 2'
+      case 'rto': return 'Issuing Authority'
+      case 'mrz1': return 'MRZ Line 1'
+      case 'mrz2': return 'MRZ Line 2'
       default: return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
     }
   }
@@ -32,8 +32,8 @@ export default function ExtractedDataGrid({ data = {} }) {
 
   if (entries.length === 0) {
     return (
-      <div className="p-6 text-center text-slate-500 text-xs">
-        No OCR structured data extracted.
+      <div className="p-6 text-center text-gray-500 text-sm bg-white rounded-lg border border-gray-200">
+        No OCR structured data extracted from this scan.
       </div>
     )
   }
@@ -45,27 +45,27 @@ export default function ExtractedDataGrid({ data = {} }) {
         return (
           <div
             key={key}
-            className={`p-3.5 rounded-lg bg-slate-900/70 border border-slate-800/80 flex flex-col justify-between group hover:border-slate-700 transition-colors ${
+            className={`p-3.5 rounded-lg bg-white border border-gray-200 flex flex-col justify-between group hover:border-gray-300 transition-colors duration-150 shadow-card ${
               isLong ? 'md:col-span-2' : ''
             }`}
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+              <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">
                 {formatKeyLabel(key)}
               </span>
               <button
                 onClick={() => handleCopy(key, String(val))}
-                className="text-slate-500 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
                 title="Copy field"
               >
                 {copiedKey === key ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <Check className="w-4 h-4 text-emerald-600" />
                 ) : (
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-4 h-4" />
                 )}
               </button>
             </div>
-            <p className={`text-sm font-medium text-slate-200 ${key.startsWith('mrz') || key === 'idNumber' ? 'font-mono text-blue-300' : ''}`}>
+            <p className={`text-sm font-bold text-gray-900 ${key.startsWith('mrz') || key === 'idNumber' ? 'font-mono text-blue-700' : ''}`}>
               {String(val)}
             </p>
           </div>

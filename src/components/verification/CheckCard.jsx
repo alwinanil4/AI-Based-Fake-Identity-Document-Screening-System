@@ -6,40 +6,40 @@ export default function CheckCard({ check }) {
 
   return (
     <div
-      className={`p-4 rounded-xl border transition-all ${
+      className={`p-4 rounded-lg border transition-colors duration-150 ${
         passed
-          ? 'bg-slate-900/60 border-slate-800 hover:border-emerald-500/30'
+          ? 'bg-white border-gray-200 hover:border-gray-300'
           : score > 30
-          ? 'bg-amber-950/15 border-amber-500/30 hover:border-amber-500/50'
-          : 'bg-rose-950/15 border-rose-500/30 hover:border-rose-500/50'
+          ? 'bg-amber-50/60 border-amber-200 hover:border-amber-300'
+          : 'bg-red-50/60 border-red-200 hover:border-red-300'
       }`}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
+      <div className="flex items-start justify-between gap-3 mb-1.5">
         <div className="flex items-center gap-2">
           {passed ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           ) : score > 30 ? (
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           ) : (
-            <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <XCircle className="w-5 h-5 text-red-600 shrink-0" />
           )}
-          <span className="text-sm font-semibold text-slate-200">{name}</span>
+          <span className="text-sm font-bold text-gray-900">{name}</span>
         </div>
 
         <span
-          className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full border ${
+          className={`text-sm font-mono font-bold px-2.5 py-0.5 rounded border ${
             passed
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : score > 30
-              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+              ? 'bg-amber-50 text-amber-800 border-amber-200'
+              : 'bg-red-50 text-red-800 border-red-200'
           }`}
         >
           {score.toFixed(1)}%
         </span>
       </div>
 
-      <p className="text-xs text-slate-400 leading-relaxed pl-6">
+      <p className="text-sm text-gray-600 leading-relaxed pl-7">
         {details}
       </p>
     </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { History as HistoryIcon, Download, RefreshCw, Filter } from 'lucide-react'
+import { History as HistoryIcon, Download, RefreshCw } from 'lucide-react'
 import VerificationTable from '../components/tables/VerificationTable'
 import { api } from '../services/api'
 
@@ -32,48 +32,55 @@ export default function History() {
 
   const handleExportCSV = () => {
     if (verifications.length === 0) return
-    const headers = 'Verification ID,Document Type,Citizen Name,ID Number,Status,Risk Score,Timestamp\n'
+    const headers = 'Verification ID,Document Type,Document Name,Verdict,Confidence %,Timestamp\n'
     const rows = verifications
-      .map(v => `"${v.id}","${v.documentType}","${v.citizenName}","${v.idNumber}","${v.status}",${v.riskScore},"${v.timestamp}"`)
+      .map(v => `"${v.id}","${v.documentType || 'ID'}","${v.documentName || v.filename || ''}","${v.status || v.verdict || ''}",${v.confidence || 0},"${v.timestamp || v.created_at || ''}"`)
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `trustid_verification_audit_${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `docshield_verification_audit_${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <HistoryIcon className="w-5 h-5 text-blue-400" />
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              Verification Audit History
-            </h1>
+      <div className="p-6 rounded-xl bg-white border border-gray-200 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+            <HistoryIcon className="w-5 h-5" />
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Complete cryptographic and forensic audit trail for all screened identity documents.
-          </p>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+              Audit History
+            </h1>
+            <p className="text-sm text-gray-600 mt-0.5">
+              Records and forensic logs for all analyzed identity documents.
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={loadData}
-            className="p-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-            title="Refresh logs"
+            className="p-2.5 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 hover:text-gray-900 shadow-card transition-colors duration-150"
+            title="Refresh database records"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+            disabled={verifications.length === 0}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold shadow-card transition-colors duration-150 ${
+              verifications.length === 0
+                ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+            }`}
           >
-            <Download className="w-3.5 h-3.5 text-blue-400" />
-            <span>Export CSV Audit Log</span>
+            <Download className="w-4 h-4 text-blue-600" />
+            <span>Export CSV Log</span>
           </button>
         </div>
       </div>

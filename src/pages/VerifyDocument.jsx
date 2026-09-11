@@ -1,15 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Shield, 
-  Cpu, 
-  Scan, 
   CheckCircle2, 
-  Sparkles, 
-  Info,
-  Layers,
-  FileSearch,
-  SearchCheck
+  AlertCircle,
+  X,
+  FileText,
+  Activity,
+  Cpu,
+  Eye,
+  Loader2
 } from 'lucide-react'
 import DocumentUploader from '../components/verification/DocumentUploader'
 import { api } from '../services/api'
@@ -17,196 +16,225 @@ import { api } from '../services/api'
 export default function VerifyDocument() {
   const navigate = useNavigate()
   const [isProcessing, setIsProcessing] = useState(false)
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [activeStageIndex, setActiveStageIndex] = useState(0)
+  const [completedStages, setCompletedStages] = useState([])
+  const [scanPreviewUrl, setScanPreviewUrl] = useState(null)
+  const [errorMessage, setErrorMessage] = useState('')
+  const backendPromiseRef = useRef(null)
 
-  const SCAN_STAGES = [
+  const STAGES = [
     { 
       layer: 'Layer 1', 
-      title: 'Behavioral & Device Signals', 
-      desc: 'Checking EXIF camera metadata, client telemetry, and sensor noise entropy',
-      color: 'border-cyan-500/40 text-cyan-400'
+      title: 'Device & Behavioral Signals', 
+      desc: 'Checks request headers, client environment, and sensor noise consistency.',
+      icon: Activity
     },
     { 
       layer: 'Layer 2', 
-      title: 'OCR & Structural Validation', 
-      desc: 'Tesseract OCR text parsing, ICAO 7-3-1 check digits, and typographic baseline alignment',
-      color: 'border-emerald-500/40 text-emerald-400'
+      title: 'OCR & Text Structure', 
+      desc: 'Verifies ICAO check digits, data fields, and typography alignment.',
+      icon: FileText
     },
     { 
       layer: 'Layer 3', 
-      title: 'Image Forensics Engine', 
-      desc: 'Error Level Analysis (ELA), ORB copy-move clone detection, and 2D FFT spectral analysis',
-      color: 'border-amber-500/40 text-amber-400'
+      title: 'Image Forensics', 
+      desc: 'Tests for copy-move cloning, JPEG recompression, and frequency anomalies.',
+      icon: Eye
     },
     { 
       layer: 'Layer 4', 
-      title: 'AI / Deep Learning Detection', 
-      desc: 'Deep convolutional feature maps and Grad-CAM explainable heatmap localization',
-      color: 'border-purple-500/40 text-purple-400'
+      title: 'Deep Learning Model', 
+      desc: 'Runs neural network classification and produces Grad-CAM visual evidence.',
+      icon: Cpu
     }
   ]
 
   const handleStartVerification = async (payload) => {
+    setErrorMessage('')
     setIsProcessing(true)
-    setCurrentStepIndex(0)
+    setActiveStageIndex(0)
+    setCompletedStages([])
+    setScanPreviewUrl(payload.previewUrl || null)
 
-    // Progress through visual steps during the parallel AI backend call
-    const stepInterval = setInterval(() => {
-      setCurrentStepIndex((prev) => {
-        if (prev < SCAN_STAGES.length - 1) {
-          return prev + 1
-        }
-        return prev
-      })
-    }, 600)
+    // Fast, restrained sequence: ~900ms total (within 800ms - 1.2s rule)
+    const stageDelays = [220, 220, 220, 240]
+    const startTime = Date.now()
+
+    // 1. Dispatch real backend screening call
+    const backendPromise = api.screenDocument(payload)
+    backendPromiseRef.current = backendPromise
 
     try {
-      const result = await api.screenDocument(payload)
-      setCurrentStepIndex(SCAN_STAGES.length - 1)
-      clearInterval(stepInterval)
-      // Small pause to let user see all 4 layers completed
+      // Layer 1
+      setActiveStageIndex(0)
+      await new Promise(r => setTimeout(r, stageDelays[0]))
+      setCompletedStages([0])
+
+      // Layer 2
+      setActiveStageIndex(1)
+      await new Promise(r => setTimeout(r, stageDelays[1]))
+      setCompletedStages([0, 1])
+
+      // Layer 3
+      setActiveStageIndex(2)
+      await new Promise(r => setTimeout(r, stageDelays[2]))
+      setCompletedStages([0, 1, 2])
+
+      // Layer 4 (Wait for backend response)
+      setActiveStageIndex(3)
+      const result = await backendPromise
+
+      const elapsed = Date.now() - startTime
+      if (elapsed < 900) {
+        await new Promise(r => setTimeout(r, 900 - elapsed))
+      }
+
+      setCompletedStages([0, 1, 2, 3])
+
+      // Immediate transition (180ms)
       setTimeout(() => {
         navigate(`/results/${result.id}`)
-      }, 400)
+      }, 180)
     } catch (err) {
-      clearInterval(stepInterval)
-      console.error('Screening failed:', err)
       setIsProcessing(false)
+      setErrorMessage(err.message || 'Screening engine encountered an error. Please verify backend is running.')
     }
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              DocShield AI — Multi-Layer Document Screening
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+              Document Verification
             </h1>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 font-semibold">
-              SIH 2026 Live Terminal
+            <span className="text-sm px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold font-mono">
+              SIH26188
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Parallel behavioral, structural, forensic, and AI vision inspection for Indian identity documents.
+          <p className="text-sm text-gray-600 mt-1">
+            Upload an official identity card to run 4-layer screening.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Parallel 4-Layer Execution</span>
         </div>
       </div>
 
-      {/* Main Uploader Form */}
-      <DocumentUploader
-        onStartVerification={handleStartVerification}
-        isProcessing={isProcessing}
-        scanningStage={SCAN_STAGES[currentStepIndex]?.title}
-      />
-
-      {/* Active AI Processing Stepper Modal Overlay */}
-      {isProcessing && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#0d1322] border border-blue-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-            {/* Animated Laser Scanner Line */}
-            <div className="scanner-laser" />
-
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 mx-auto mb-3 shadow-[0_0_25px_rgba(59,130,246,0.35)] animate-pulse">
-                <Scan className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-bold text-white tracking-tight">
-                Parallel Multi-Layer Inspection
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Executing Layers 1–4 concurrently across hardware threads
-              </p>
+      {/* Error Alert Banner */}
+      {errorMessage && (
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 flex items-start justify-between gap-3 text-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-red-900">Verification Notice</p>
+              <p className="text-red-800 mt-0.5">{errorMessage}</p>
             </div>
-
-            {/* Stepper Progress */}
-            <div className="space-y-3 mb-6">
-              {SCAN_STAGES.map((stage, idx) => {
-                const isCompleted = idx < currentStepIndex
-                const isCurrent = idx === currentStepIndex
-                return (
-                  <div
-                    key={stage.layer}
-                    className={`p-3 rounded-xl border transition-all flex items-start gap-3.5 ${
-                      isCurrent
-                        ? 'bg-blue-600/15 border-blue-500/60 text-white shadow-md shadow-blue-500/10'
-                        : isCompleted
-                        ? 'bg-emerald-950/20 border-emerald-500/40 text-slate-200'
-                        : 'bg-slate-900/30 border-slate-800/60 text-slate-500'
-                    }`}
-                  >
-                    <div className="mt-1">
-                      {isCompleted ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      ) : isCurrent ? (
-                        <div className="w-5 h-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full border border-slate-700 flex items-center justify-center text-[10px] text-slate-600 font-bold">
-                          {idx + 1}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${stage.color} bg-black/40 font-mono`}>
-                            {stage.layer}
-                          </span>
-                          <span className="text-xs font-bold">{stage.title}</span>
-                        </div>
-                        {isCurrent && (
-                          <span className="text-[10px] text-blue-400 font-mono font-semibold animate-pulse">
-                            Analyzing...
-                          </span>
-                        )}
-                        {isCompleted && (
-                          <span className="text-[10px] text-emerald-400 font-mono font-semibold flex items-center gap-1">
-                            <span>Completed</span>
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-1 leading-snug">{stage.desc}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Live Progress Bar */}
-            <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden mb-3 border border-slate-800">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 via-teal-400 to-emerald-400 transition-all duration-300"
-                style={{ width: `${Math.min(100, Math.round(((currentStepIndex + 1) / SCAN_STAGES.length) * 100))}%` }}
-              />
-            </div>
-
-            <p className="text-center text-[11px] text-slate-500 font-mono">
-              Aggregating outputs via deterministic forensic veto logic
-            </p>
           </div>
+          <button 
+            onClick={() => setErrorMessage('')} 
+            className="text-red-500 hover:text-red-800 p-1"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
       )}
 
+      {/* Main Content Area: Scanning Progress OR Uploader */}
+      {isProcessing ? (
+        <div className="p-6 sm:p-8 rounded-xl bg-white border border-gray-200 shadow-card space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-sm font-semibold">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+              <span>Analyzing Document</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+              Running 4-Layer Inspection
+            </h2>
+            <p className="text-sm text-gray-600 max-w-md mx-auto">
+              Screening metadata, document structure, pixel forensics, and neural network predictions.
+            </p>
+          </div>
 
-      {/* Verification Guidelines / Help for Officers */}
-      <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 space-y-2">
-        <div className="flex items-center gap-2 text-slate-300 font-semibold">
-          <Info className="w-4 h-4 text-blue-400" />
-          <span>Officer Verification Standard Operating Procedure (SOP)</span>
+          {/* Clean Document Preview without flashy laser beam */}
+          <div className="max-w-xs mx-auto h-52 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center p-3 shadow-card">
+            {scanPreviewUrl ? (
+              <img
+                src={scanPreviewUrl}
+                alt="Document Under Analysis"
+                className="max-h-full max-w-full object-contain rounded-md"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 text-gray-400">
+                <FileText className="w-10 h-10 text-gray-400" />
+                <span className="text-sm font-mono">Document Image</span>
+              </div>
+            )}
+          </div>
+
+          {/* 4-Layer Clean Progress Indicators */}
+          <div className="space-y-3 max-w-xl mx-auto">
+            {STAGES.map((stage, idx) => {
+              const isDone = completedStages.includes(idx)
+              const isActive = activeStageIndex === idx && !isDone
+              const Icon = stage.icon
+
+              return (
+                <div
+                  key={stage.layer}
+                  className={`p-3.5 rounded-lg border transition-colors duration-150 flex items-start gap-3.5 ${
+                    isActive
+                      ? 'bg-blue-50/70 border-blue-400'
+                      : isDone
+                      ? 'bg-white border-gray-200'
+                      : 'bg-gray-50/70 border-gray-200 opacity-60'
+                  }`}
+                >
+                  {/* Status Indicator */}
+                  <div className="mt-0.5 shrink-0">
+                    {isDone ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    ) : isActive ? (
+                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-sm text-gray-400 font-mono font-bold">
+                        {idx + 1}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stage Text */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-bold text-gray-900">
+                        {stage.title}
+                      </span>
+                      <span className="text-sm font-mono text-gray-500 font-medium">
+                        {stage.layer}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-0.5 leading-normal">
+                      {stage.desc}
+                    </p>
+
+                    {/* Clean thin progress bar when active */}
+                    {isActive && (
+                      <div className="w-full h-1 rounded-full bg-blue-100 overflow-hidden mt-2">
+                        <div className="h-full bg-blue-600 rounded-full w-2/3 transition-all duration-200" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
-        <ul className="list-disc list-inside space-y-1 text-slate-400 pl-1 text-[11px]">
-          <li>Ensure document scan resolution is at least 300 DPI for micro-print integrity analysis.</li>
-          <li>For suspicious classification, cross-reference the Error Level Analysis (ELA) heatmap before taking enforcement action.</li>
-          <li>In case of a fake classification, the system automatically creates an encrypted tamper audit record.</li>
-        </ul>
-      </div>
+      ) : (
+        <DocumentUploader
+          onStartVerification={handleStartVerification}
+          isProcessing={isProcessing}
+        />
+      )}
     </div>
   )
 }

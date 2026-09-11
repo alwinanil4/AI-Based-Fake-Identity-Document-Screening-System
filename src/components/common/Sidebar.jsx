@@ -5,27 +5,24 @@ import {
   ScanLine, 
   History, 
   BarChart3, 
-  FileText, 
-  ShieldCheck, 
-  HelpCircle,
-  ExternalLink
+  ShieldCheck
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { path: '/', label: 'Overview', icon: LayoutDashboard },
-  { path: '/verify', label: 'Scan Document', icon: ScanLine, highlight: true },
+  { path: '/verify', label: 'Analyze Document', icon: ScanLine, highlight: true },
   { path: '/history', label: 'Audit History', icon: History },
   { path: '/dashboard', label: 'Operations Center', icon: ShieldCheck },
-  { path: '/analytics', label: 'Fraud Analytics', icon: BarChart3 },
+  { path: '/analytics', label: 'Threat Analytics', icon: BarChart3 },
 ]
 
 export default function Sidebar() {
   return (
-    <aside className="w-64 border-r border-slate-800/80 bg-[#0d1322] flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
+    <aside className="w-64 border-r border-gray-200 bg-white flex flex-col justify-between shrink-0 min-h-[calc(100vh-4rem)]">
       <div className="p-4 space-y-6">
         {/* Navigation Group */}
         <div>
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-3 mb-2">
+          <p className="text-sm font-bold text-gray-400 uppercase tracking-wider px-3 mb-2">
             Screening System
           </p>
           <nav className="space-y-1">
@@ -37,17 +34,17 @@ export default function Sidebar() {
                   to={item.path}
                   end={item.path === '/'}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm transition-colors duration-150 ${
                       isActive
-                        ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                        ? 'bg-blue-50 text-blue-700 font-bold'
+                        : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 font-medium'
                     }`
                   }
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span>{item.label}</span>
                   {item.highlight && (
-                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    <span className="ml-auto w-2 h-2 rounded-full bg-blue-600"></span>
                   )}
                 </NavLink>
               )
@@ -56,16 +53,16 @@ export default function Sidebar() {
         </div>
 
         {/* Supported Documents Badge */}
-        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs">
-          <div className="flex items-center gap-2 text-slate-300 font-semibold mb-2">
-            <ShieldCheck className="w-4 h-4 text-blue-400" />
-            <span>Supported Indian IDs</span>
+        <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 text-sm">
+          <div className="flex items-center gap-2 text-gray-800 font-bold mb-2.5">
+            <ShieldCheck className="w-4 h-4 text-blue-600" />
+            <span>Supported Standards</span>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {['Aadhaar (UIDAI)', 'PAN (NSDL)', 'Voter ID (EPIC)', 'Passport (ICAO)', 'Driving License'].map((doc) => (
+            {['Aadhaar', 'PAN Card', 'Voter ID', 'Passport', 'Driving License'].map((doc) => (
               <span
                 key={doc}
-                className="px-2 py-0.5 rounded bg-slate-800/80 text-slate-300 text-[10px] border border-slate-700/60"
+                className="px-2.5 py-1 rounded bg-white text-gray-700 text-sm border border-gray-200 font-medium"
               >
                 {doc}
               </span>
@@ -75,18 +72,19 @@ export default function Sidebar() {
       </div>
 
       {/* Bottom SIH Badge */}
-      <div className="p-4 border-t border-slate-800/80">
-        <div className="p-3 rounded-lg bg-gradient-to-br from-slate-900 to-blue-950/40 border border-blue-900/30">
-          <div className="flex items-center justify-between text-xs text-slate-300 font-medium mb-1">
-            <span className="font-bold text-white">SIH 2026</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-mono">Team InnovX</span>
+      <div className="p-4 border-t border-gray-200">
+        <div className="p-3.5 rounded-lg bg-gray-50 border border-gray-200 space-y-1">
+          <div className="flex items-center justify-between text-sm font-bold text-gray-900">
+            <span>SIH 2026</span>
+            <span className="text-sm px-2 py-0.5 rounded bg-white text-gray-700 border border-gray-200 font-mono">
+              Team InnovX
+            </span>
           </div>
-          <p className="text-[11px] text-slate-400">
-            Problem Statement SIH26188: AI-Based Identity Screening
+          <p className="text-sm text-gray-500 leading-snug">
+            Problem Statement SIH26188
           </p>
         </div>
       </div>
     </aside>
   )
 }
-

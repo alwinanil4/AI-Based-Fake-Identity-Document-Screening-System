@@ -7,7 +7,6 @@ import {
   FileCheck2, 
   Scan, 
   ArrowRight, 
-  Layers, 
   Activity 
 } from 'lucide-react'
 import StatCard from '../components/common/StatCard'
@@ -37,29 +36,34 @@ export default function Dashboard() {
     loadDashboard()
   }, [])
 
+  const total = stats?.total || 0
+  const genuineRate = total > 0 ? `${Math.round((stats.genuine / total) * 100)}%` : 'None'
+  const suspiciousRate = total > 0 ? `${Math.round((stats.suspicious / total) * 100)}%` : 'None'
+  const fakeRate = total > 0 ? `${Math.round((stats.fake / total) * 100)}%` : 'None'
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto animate-fade-in">
       {/* Welcome & Quick Action Hero */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-[#0d1322] border border-blue-900/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-6 sm:p-8 rounded-xl bg-white border border-gray-200 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold mb-2">
-            <Activity className="w-3.5 h-3.5" />
-            <span>AI Automated Screening Terminal</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-sm font-semibold mb-2">
+            <Activity className="w-4 h-4" />
+            <span>Inspection Terminal</span>
           </div>
-          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">
-            Identity Document Verification Center
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Document Screening Center
           </h1>
-          <p className="text-xs md:text-sm text-slate-400 mt-1 max-w-xl">
-            Real-time multi-modal screening against physical tampering, synthetic portraits, font variations, and mathematical checksum inconsistencies.
+          <p className="text-sm text-gray-600 mt-1 max-w-xl leading-normal">
+            Inspect identity documents for image splicing, font anomalies, cloned seals, and synthetic images.
           </p>
         </div>
 
         <Link
           to="/verify"
-          className="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/30 shrink-0 group"
+          className="inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors duration-150 shadow-card shrink-0"
         >
-          <Scan className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          <span>Screen Document</span>
+          <Scan className="w-4 h-4" />
+          <span>Analyze a Document</span>
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
@@ -67,36 +71,35 @@ export default function Dashboard() {
       {/* Metric Counters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Screenings"
-          value={stats ? stats.total : '—'}
-          subtitle="Processed at checkpoints"
+          title="Total Documents"
+          value={stats ? stats.total : 0}
+          subtitle="Processed in database"
           icon={FileCheck2}
           colorScheme="blue"
-          trend={{ value: '+14% today', positive: true }}
         />
         <StatCard
           title="Genuine Documents"
-          value={stats ? stats.genuine : '—'}
-          subtitle="Passed all security criteria"
+          value={stats ? stats.genuine : 0}
+          subtitle="Passed security checks"
           icon={ShieldCheck}
           colorScheme="emerald"
-          trend={{ value: 'Clearance rate 82%', positive: true }}
+          trend={total > 0 ? { value: `${genuineRate} pass rate`, positive: true } : undefined}
         />
         <StatCard
-          title="Suspicious Flagged"
-          value={stats ? stats.suspicious : '—'}
-          subtitle="Requires secondary review"
+          title="Suspicious Flags"
+          value={stats ? stats.suspicious : 0}
+          subtitle="Needs secondary check"
           icon={AlertTriangle}
           colorScheme="amber"
-          trend={{ value: 'Manual check required', positive: false }}
+          trend={total > 0 && stats.suspicious > 0 ? { value: `${suspiciousRate} review rate`, positive: false } : undefined}
         />
         <StatCard
-          title="Counterfeits Detected"
-          value={stats ? stats.fake : '—'}
-          subtitle="Confirmed fraudulent / fake"
+          title="Detected Forgeries"
+          value={stats ? stats.fake : 0}
+          subtitle="Confirmed fraudulent"
           icon={ShieldAlert}
           colorScheme="rose"
-          trend={{ value: 'Zero tolerance block', positive: false }}
+          trend={total > 0 && stats.fake > 0 ? { value: `${fakeRate} forgery rate`, positive: false } : undefined}
         />
       </div>
 
@@ -104,15 +107,15 @@ export default function Dashboard() {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white tracking-tight">Recent Screening Feed</h2>
-            <p className="text-xs text-slate-400">Latest identity documents inspected by checkpoint officers</p>
+            <h2 className="text-base font-bold text-gray-900 tracking-tight uppercase">Recent Analyses</h2>
+            <p className="text-sm text-gray-500">Inspection records saved in the database</p>
           </div>
           <Link
             to="/history"
-            className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+            className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors duration-150"
           >
             <span>View All Records</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 

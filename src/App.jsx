@@ -14,16 +14,16 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#111827] flex flex-col font-sans">
       {/* Top Navigation Bar */}
       <Navbar />
 
       {/* Mobile Navigation Toggle Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-800 text-xs">
-        <span className="font-semibold text-slate-400">Navigation Menu</span>
+      <div className="md:hidden flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200 text-sm">
+        <span className="font-semibold text-gray-600">DocShield AI Navigation</span>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-1 rounded bg-slate-800 text-slate-300 hover:text-white"
+          className="p-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
         >
           {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </button>
@@ -40,10 +40,10 @@ export default function App() {
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-40 md:hidden flex">
             <div 
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+              className="fixed inset-0 bg-gray-900/40 backdrop-blur-xs"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="relative z-50 w-64 bg-[#0d1322] h-full shadow-2xl">
+            <div className="relative z-50 w-64 bg-white h-full shadow-xl border-r border-gray-200">
               <Sidebar />
             </div>
           </div>

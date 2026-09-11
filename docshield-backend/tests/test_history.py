@@ -56,3 +56,18 @@ def test_history_and_scan_by_id(client):
     assert "confidence" in scan_detail
     assert "reason_tags" in scan_detail
     assert "layer_results" in scan_detail
+
+
+def test_stats_endpoint(client):
+    """Verifies that /api/stats returns real aggregated counters."""
+    resp = client.get("/api/stats")
+    assert resp.status_code == 200
+    stats = resp.get_json()
+    assert "total" in stats
+    assert "genuine" in stats
+    assert "suspicious" in stats
+    assert "fake" in stats
+    assert "avgRisk" in stats
+    assert "statusDistribution" in stats
+    assert isinstance(stats["statusDistribution"], list)
+

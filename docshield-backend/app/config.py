@@ -36,14 +36,14 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Uploads & Storage Security
-    # 10MB default hard body limit enforced at Flask request level
-    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "10")) * 1024 * 1024
+    # 16MB default limit enforced at Flask request level (handles phone-camera JPGs)
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "16")) * 1024 * 1024
     UPLOAD_FOLDER = os.path.abspath(
         os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "uploads"))
     )
     MAX_IMAGE_DIMENSION = int(os.getenv("MAX_IMAGE_DIMENSION", "8000"))
     ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
-    ALLOWED_MIME_TYPES = {"image/jpeg", "image/png"}
+    ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/pjpeg", "image/jpg"}
 
     # CORS Allow-list (Never wildcard in production)
     _raw_cors = os.getenv(
