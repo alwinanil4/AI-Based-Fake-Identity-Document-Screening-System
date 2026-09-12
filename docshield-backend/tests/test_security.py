@@ -108,19 +108,31 @@ def test_attack_4_path_traversal_filename(client, app):
 
 def test_attack_5_rate_limit_analyze(client):
     """Attack 5: Flooding /api/v1/analyze beyond rate limit must return 429."""
+    from unittest.mock import patch
+
     buf = io.BytesIO()
     img = Image.new("RGB", (64, 64), color=(200, 200, 200))
     img.save(buf, format="JPEG")
     raw_img = buf.getvalue()
 
+    mock_agg = {
+        "verdict": "GENUINE",
+        "confidence": 95.0,
+        "reason_tags": [],
+        "heatmap_base64": None,
+        "layer_results": {},
+        "analysis_time_ms": 12,
+    }
+
     hit_429 = False
-    for i in range(25):
-        data = {"image": (io.BytesIO(raw_img), f"scan_{i}.jpg", "image/jpeg")}
-        res = client.post("/api/v1/analyze", data=data, content_type="multipart/form-data")
-        if res.status_code == 429:
-            hit_429 = True
-            assert "Rate Limit Exceeded" in res.get_json()["error"]
-            break
+    with patch("app.api.analyze.execute_parallel_analysis", return_value=mock_agg):
+        for i in range(25):
+            data = {"image": (io.BytesIO(raw_img), f"scan_{i}.jpg", "image/jpeg")}
+            res = client.post("/api/v1/analyze", data=data, content_type="multipart/form-data")
+            if res.status_code == 429:
+                hit_429 = True
+                assert "Rate Limit Exceeded" in res.get_json()["error"]
+                break
 
     assert hit_429, "Rate limiter failed to throttle excessive requests to /analyze"
 

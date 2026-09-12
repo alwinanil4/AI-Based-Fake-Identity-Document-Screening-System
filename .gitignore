@@ -26,3 +26,17 @@ pnpm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python & Backend Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+uploads/
+scratch/
+instance/
+*.sqlite3
+*.db
+*.enc
+.venv/
+
