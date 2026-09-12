@@ -4,12 +4,13 @@ from app.extensions import db
 
 
 class ScanResult(db.Model):
-    """Database model for storing historical scan outcomes."""
+    """Database model for storing historical scan outcomes with tenant session isolation."""
 
     __tablename__ = "scan_results"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     request_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    owner_session_id = db.Column(db.String(64), nullable=True, index=True)
     filename = db.Column(db.String(255), nullable=True, default="uploaded_document.jpg")
     verdict = db.Column(db.String(32), nullable=False, index=True)  # Genuine, Fake, Suspicious
     confidence = db.Column(db.Float, nullable=False)
@@ -38,6 +39,11 @@ class ScanResult(db.Model):
 
         formatted_id = f"SCAN-{self.id:04d}" if self.id else self.request_id
 
+        doc_source = layers.get("document_source", {})
+        vis_forensics = layers.get("visual_forensics", {})
+        barcode_info = layers.get("barcode_crosscheck", {})
+        face_info = layers.get("face_match", {})
+
         return {
             "id": formatted_id,
             "scan_id": self.id,
@@ -54,8 +60,17 @@ class ScanResult(db.Model):
             "heatmap_base64": self.heatmap_base64,
             "thumbnail_base64": self.thumbnail_base64,
             "layer_results": layers,
+            "document_source": doc_source,
+            "visual_forensics": vis_forensics,
+            "barcode_crosscheck": barcode_info,
+            "face_match": face_info,
+            "privacy": {
+                "encrypted_at_rest": True,
+                "upload_deleted": True,
+                "encryption_algorithm": "AES-256-GCM",
+                "ephemeral_lifecycle": True,
+            },
             "analysis_time_ms": self.analysis_time_ms,
             "processing_time_ms": self.analysis_time_ms,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
-

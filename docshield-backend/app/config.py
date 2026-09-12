@@ -22,6 +22,10 @@ class BaseConfig:
     # Core Security Keys
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-secret-key-change-me")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-insecure-jwt-key-change-me")
+    DOCSHIELD_AES_KEY = os.getenv("DOCSHIELD_AES_KEY", "")
+
+    # Uploads Lifecycle & Retention
+    RETAIN_UPLOADS_FOR_DEMO = os.getenv("RETAIN_UPLOADS_FOR_DEMO", "false").lower() in ("true", "1", "yes")
 
     # JWT Settings
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(
@@ -36,14 +40,14 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Uploads & Storage Security
-    # 16MB default limit enforced at Flask request level (handles phone-camera JPGs)
+    # 16MB default limit enforced at Flask request level (handles phone-camera JPGs & PDFs)
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "16")) * 1024 * 1024
     UPLOAD_FOLDER = os.path.abspath(
         os.getenv("UPLOAD_FOLDER", str(BASE_DIR / "uploads"))
     )
     MAX_IMAGE_DIMENSION = int(os.getenv("MAX_IMAGE_DIMENSION", "8000"))
-    ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
-    ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/pjpeg", "image/jpg"}
+    ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
+    ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/pjpeg", "image/jpg", "application/pdf"}
 
     # CORS Allow-list (Never wildcard in production)
     _raw_cors = os.getenv(
@@ -94,6 +98,8 @@ class TestingConfig(BaseConfig):
     # Strict secret keys for test assertions
     SECRET_KEY = "test-secret-key-do-not-use-in-production"
     JWT_SECRET_KEY = "test-jwt-key-do-not-use-in-production"
+    DOCSHIELD_AES_KEY = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    RETAIN_UPLOADS_FOR_DEMO = False
 
 
 class ProductionConfig(BaseConfig):
@@ -124,6 +130,11 @@ class ProductionConfig(BaseConfig):
         if not os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET_KEY") == "dev-insecure-jwt-key-change-me":
             raise ValueError(
                 "A strong JWT_SECRET_KEY must be set in production environment variables"
+            )
+        aes_key = os.getenv("DOCSHIELD_AES_KEY")
+        if not aes_key or len(aes_key.strip()) < 32:
+            raise ValueError(
+                "A 256-bit DOCSHIELD_AES_KEY must be set in production environment variables"
             )
 
 

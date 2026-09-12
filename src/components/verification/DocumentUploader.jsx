@@ -6,13 +6,15 @@ import {
   AlertCircle, 
   X, 
   RefreshCw, 
-  ArrowRight
+  ArrowRight,
+  UserCheck,
+  ShieldCheck
 } from 'lucide-react'
 import { DEMO_PRESETS } from '../../services/api'
 import { formatBytes } from '../../utils/helpers'
 
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png']
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg']
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf']
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg', 'application/pdf']
 const MAX_FILE_SIZE = 16 * 1024 * 1024 // 16MB
 
 export default function DocumentUploader({ onStartVerification, isProcessing }) {
@@ -25,6 +27,11 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
   const [errorMessage, setErrorMessage] = useState('')
   const fileInputRef = useRef(null)
 
+  // Secondary file state for Cross-Document Face Matching
+  const [secondaryFile, setSecondaryFile] = useState(null)
+  const [secondaryPreviewUrl, setSecondaryPreviewUrl] = useState(null)
+  const secondaryInputRef = useRef(null)
+
   const handleFileValidation = (file) => {
     setErrorMessage('')
     if (!file) return false
@@ -32,15 +39,15 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
     const fileName = (file.name || '').toLowerCase()
     const hasValidExt = ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext))
     const fileMime = (file.type || '').toLowerCase()
-    const hasValidMime = ALLOWED_MIME_TYPES.includes(fileMime)
+    const hasValidMime = ALLOWED_MIME_TYPES.includes(fileMime) || fileName.endsWith('.pdf')
 
     if (!hasValidExt && !hasValidMime) {
-      setErrorMessage('Please upload a JPG or PNG image file (.jpg, .jpeg, or .png).')
+      setErrorMessage('Please upload a valid document file (.jpg, .jpeg, .png, or .pdf).')
       return false
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMessage(`File exceeds the 16MB limit (${formatBytes(file.size)}). Please choose a smaller image.`)
+      setErrorMessage(`File exceeds the 16MB limit (${formatBytes(file.size)}). Please choose a smaller file.`)
       return false
     }
 
@@ -52,7 +59,23 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
     if (file && handleFileValidation(file)) {
       setSelectedFile(file)
       setSelectedPreset(null)
-      setPreviewUrl(URL.createObjectURL(file))
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        setPreviewUrl(null)
+      } else {
+        setPreviewUrl(URL.createObjectURL(file))
+      }
+    }
+  }
+
+  const handleSecondaryFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (file && handleFileValidation(file)) {
+      setSecondaryFile(file)
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        setSecondaryPreviewUrl(null)
+      } else {
+        setSecondaryPreviewUrl(URL.createObjectURL(file))
+      }
     }
   }
 
@@ -63,7 +86,11 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
     if (file && handleFileValidation(file)) {
       setSelectedFile(file)
       setSelectedPreset(null)
-      setPreviewUrl(URL.createObjectURL(file))
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        setPreviewUrl(null)
+      } else {
+        setPreviewUrl(URL.createObjectURL(file))
+      }
     }
   }
 
@@ -83,6 +110,12 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
     setSelectedPreset(null)
     setErrorMessage('')
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleRemoveSecondaryFile = () => {
+    setSecondaryFile(null)
+    setSecondaryPreviewUrl(null)
+    if (secondaryInputRef.current) secondaryInputRef.current.value = ''
   }
 
   const handleSelectPreset = async (preset) => {
@@ -118,6 +151,7 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
 
     onStartVerification({
       file: selectedFile,
+      secondaryFile: secondaryFile || null,
       docType: selectedDocType,
       presetId: selectedPreset?.id,
       officerNotes,
@@ -214,7 +248,7 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/jpg,.jpg,.jpeg,.png"
+            accept="image/jpeg,image/png,image/jpg,.jpg,.jpeg,.png,.pdf,application/pdf"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -224,10 +258,10 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
           </div>
 
           <h3 className="text-base font-bold text-gray-900 mb-1">
-            Drag and drop document image here
+            Drag and drop document image or PDF here
           </h3>
           <p className="text-sm text-gray-600 max-w-sm mx-auto mb-4 leading-relaxed">
-            Upload Aadhaar, PAN, Passport, Voter ID, or Driving License image.
+            Upload Aadhaar, PAN, Passport, Voter ID, or Driving License.
           </p>
 
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-colors duration-150">
@@ -235,7 +269,7 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
           </div>
 
           <p className="text-sm text-gray-500 mt-4">
-            Supports JPG, JPEG, and PNG. Maximum file size: 16MB.
+            Supports JPG, JPEG, PNG, and PDF. Encrypted in-memory with AES-256-GCM.
           </p>
         </div>
       ) : (
@@ -297,6 +331,79 @@ export default function DocumentUploader({ onStartVerification, isProcessing }) 
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               <span>Ready</span>
             </div>
+          </div>
+
+          {/* Optional Secondary Document Upload for Cross-Document Face Match */}
+          <div className="pt-2 border-t border-gray-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-bold text-gray-800">
+                  Cross-Document Face Verification
+                </span>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-semibold">
+                  Optional
+                </span>
+              </div>
+              {secondaryFile && (
+                <button
+                  type="button"
+                  onClick={handleRemoveSecondaryFile}
+                  className="text-xs text-red-600 hover:text-red-700 font-semibold"
+                >
+                  Clear Photo
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Upload a secondary identity card or portrait photo to cross-verify facial biometric consistency against the primary document.
+            </p>
+
+            <input
+              ref={secondaryInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/jpg,.jpg,.jpeg,.png"
+              onChange={handleSecondaryFileChange}
+              className="hidden"
+            />
+
+            {!secondaryFile ? (
+              <button
+                type="button"
+                onClick={() => secondaryInputRef.current?.click()}
+                className="w-full py-2.5 px-3 border border-dashed border-gray-300 rounded-lg bg-gray-50/50 hover:bg-gray-100 text-sm font-medium text-gray-600 flex items-center justify-center gap-2 transition-colors duration-150"
+              >
+                <UserCheck className="w-4 h-4 text-gray-500" />
+                <span>Add Secondary ID or Portrait Photo for Biometric Match</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 p-2.5 rounded-lg bg-blue-50/50 border border-blue-200">
+                {secondaryPreviewUrl ? (
+                  <img
+                    src={secondaryPreviewUrl}
+                    alt="Secondary Preview"
+                    className="w-10 h-10 rounded object-cover border border-blue-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded bg-blue-100 flex items-center justify-center text-blue-700">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-900 truncate">{secondaryFile.name}</p>
+                  <p className="text-xs text-blue-700 font-medium">Ready for Cross-Verification</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Privacy Badge Notice */}
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-800">
+            <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-700" />
+            <span>
+              <strong>Privacy-First Lifecycle:</strong> Uploads are encrypted with AES-256-GCM and deleted immediately after screening.
+            </span>
           </div>
 
           {/* Inspection Notes */}

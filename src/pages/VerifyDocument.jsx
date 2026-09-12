@@ -91,9 +91,10 @@ export default function VerifyDocument() {
 
       setCompletedStages([0, 1, 2, 3])
 
-      // Immediate transition (180ms)
+      // Immediate transition (180ms) — pass result in router state to avoid
+      // a second IDOR-gated /api/scan fetch before the session cookie settles
       setTimeout(() => {
-        navigate(`/results/${result.id}`)
+        navigate(`/results/${result.id}`, { state: { scanResult: result } })
       }, 180)
     } catch (err) {
       setIsProcessing(false)

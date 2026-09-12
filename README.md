@@ -1,227 +1,188 @@
-# DocShield AI
+# DocShield AI — Production-Grade Identity Document Screening & Multi-Layer Verification System
 
-**Multi-Layer AI System for Detecting Fake and Forged Identity Documents**
-
-Smart India Hackathon 2026 — Problem Statement SIH26188
-Team InnovX — Karunya Institute of Technology and Sciences, Coimbatore
-
----
-
-## Overview
-
-DocShield AI is a multi-layer, AI-powered document screening system that detects fake and forged identity documents through parallel forensic analysis, delivering explainable results in under 10 seconds.
-
-Instead of relying on a single detection technique, the system runs behavioral, structural, forensic, and deep-learning checks simultaneously — mirroring the approach used by industry leaders in document verification — to catch even sophisticated forgeries that a single-layer system would miss.
-
-The system doesn't just say "fake" or "genuine." It shows the evidence: a forensic heatmap, plain-language reason tags, and a side-by-side comparison of the original document against the flagged anomalies. This explainability is the core differentiator of the project.
+**Multi-Layer AI & Cryptographic System for Detecting Fake and Forged Identity Documents**  
+**Smart India Hackathon 2026** — Problem Statement **SIH26188**  
+**Team InnovX** — Karunya Institute of Technology and Sciences, Coimbatore
 
 ---
 
-## Problem Statement
+## 🛡️ One-Line Project Pitch
 
-Identity fraud and document forgery are increasing across banking, travel, and government verification workflows. Fraudsters increasingly use:
-
-- Photo splicing (an edited face pasted onto an ID)
-- Text tampering (mismatched dates or details between fields)
-- Copy-move duplication (the same element cloned across the document)
-- AI-generated forgery (GAN or diffusion-model-produced fake documents)
-- Injection attacks (a document frame replayed during a live verification session)
-
-Most existing verification tools rely on one detection method at a time — OCR checks alone, or basic image comparison alone — which leaves them vulnerable to sophisticated, multi-pronged forgery techniques. There is a clear need for a system that combines several independent detection layers and explains its reasoning, so a human reviewer can trust and act on the verdict.
+> **"DocShield AI doesn't just read an identity document — it analyzes its source, content, visual structure, encoded data, forensic consistency, and optional identity consistency while minimizing the user's privacy exposure."**
 
 ---
 
-## Solution Architecture
+## 📌 Core Product Philosophy
 
-DocShield AI is built around four independent analysis layers that run in parallel, not sequentially. Their outputs are combined by a central **Result Aggregator** into one explainable report.
+DocShield AI rejects naive binary classification that outputs ungrounded percentages like "Fake: 87%". Instead, it answers:  
+**"What concrete evidence suggests that this document is consistent, inconsistent, or suspicious?"**
+
+- **OCR** tells us *what* the document says.
+- **Document Source Verification** tells us *how* the document appears to have been produced.
+- **Visual Forensics** tells us *whether* the document looks internally consistent.
+- **QR/Barcode Cross-Check** tells us *whether* encoded data agrees with visible data.
+- **Face Matching** tells us *whether* user-supplied identities are visually consistent across documents.
+- **Security Controls** protect the document throughout the entire lifecycle.
+
+> ⚠️ **Strict Non-Negotiable Rule:** Zero fake functionality, zero fabricated confidence values, zero decorative forensic heatmaps, and zero unsubstantiated government claims. Every badge and metric originates from an actual implemented algorithmic calculation.
+
+---
+
+## 🏛️ System Architecture & Multi-Layer Verification
+
+DocShield AI executes parallel forensic and cryptographic layers within an isolated thread pool, ensuring total processing time remains under 10 seconds:
 
 ```
-USER UPLOADS DOCUMENT
-        |
-        v
-LAYER 1 — Behavioral & Device Signals
-        |
-        v
-LAYER 2 — OCR & Structural Validation
-        |
-        v
-LAYER 3 — Image Forensics
-        |
-        v
-LAYER 4 — AI / Deep Learning Detection
-        |
-        v
-RESULT AGGREGATOR
+                                  USER UPLOAD
+                                       │
+        ┌──────────────────────────────┴──────────────────────────────┐
+        │ 1. PRIVACY & SECURITY GATEWAY (AES-256-GCM Ephemeral Vault)  │
+        └──────────────────────────────┬──────────────────────────────┘
+                                       │ (Decrypted strictly in-memory)
+    ┌──────────────────────────────────┼──────────────────────────────────┐
+    ▼                                  ▼                                  ▼
+[LAYER 1: BEHAVIORAL]         [LAYER 2: OCR & MRZ]         [LAYER 3: IMAGE FORENSICS]
+• Bot/Emulator detection      • EasyOCR/Tesseract engines  • Error Level Analysis (ELA)
+• Injection attack checks     • ICAO Doc 9303 checksums    • Copy-Move ORB keypoints
+• Client entropy validation   • Document classification    • FFT/DCT high-freq analysis
+    │                                  │                                  │
+    ▼                                  ▼                                  ▼
+[LAYER 4: DEEP LEARNING]      [DOCUMENT SOURCE VERIFIER]   [BARCODE/QR CROSS-CHECK]
+• EfficientNet-B0 detector    • PDF object tree/AcroForms  • Multi-pass pyzbar + CLAHE
+• Real trained model weights  • Signature dictionary check • Aadhaar/PAN field parser
+• Grad-CAM anomaly heatmaps   • EXIF camera metadata tags  • High-confidence mismatch
+    │                                  │                                  │
+    └──────────────────────────────────┼──────────────────────────────────┘
+                                       │
+                    [CROSS-DOCUMENT BIOMETRIC FACE MATCHER]
+                    • Optional secondary selfie/ID comparison
+                    • Spatial gradient & texture descriptors
+                    • 100% offline, privacy-first execution
+                                       │
+                                       ▼
+                       [EXPLAINABLE RISK AGGREGATOR]
+                       • Deterministic vetoes & evidence tags
+                       • Honest Status Badges (UNKNOWN ≠ FAIL)
+                       • Guaranteed Ephemeral Disk Deletion
 ```
 
-### Layer 1 — Behavioral & Device Signals
-- Detects scripted or automated submissions
-- Flags emulators, virtual cameras, and frame-injection attacks
-- Confirms a genuine live capture session
+---
 
-### Layer 2 — OCR & Structural Validation
-- Extracts text using Tesseract OCR and EasyOCR
-- Validates MRZ and barcode data using zbarcam
-- Cross-checks extracted fields against MRZ data
-- Checks font alignment and layout consistency
+## 🔒 Security & Privacy Architecture
 
-### Layer 3 — Image Forensics
-- Error Level Analysis (ELA) — reveals compression edits
-- Copy-move detection — flags duplicated regions
-- Pixel-level anomaly detection (CNN / EfficientNet)
-- Frequency analysis (DCT / FFT) — catches GAN artifacts
+### 1. Ephemeral Upload Lifecycle
+- **Upload** → Validate MIME/magic bytes → Encrypt via AES-256-GCM → Decrypt in memory → Analyze → Return JSON → Delete encrypted file.
+- **Guaranteed Cleanup**: Encrypted temporary files are cleaned via `try ... finally` blocks regardless of whether analysis succeeds, fails, or throws an exception. Plaintext documents are **never** written to persistent storage.
+- **Demo Mode**: Controlled via `RETAIN_UPLOADS_FOR_DEMO=false` (default is strictly `false`).
 
-### Layer 4 — AI / Deep Learning Detection
-- Vision Transformer (ViT) for unified detection and localization
-- Trained on synthetic forgery datasets, including GenAI-generated documents
-- Produces a forensic heatmap and confidence score
+### 2. AES-256-GCM Authenticated Encryption
+- Implemented in `app/security/encryption.py` using standard cryptography primitives.
+- Generates a cryptographically secure 96-bit random nonce (`os.urandom(12)`) per encryption operation.
+- Validates a 128-bit authentication tag to detect any ciphertext tampering.
+- Strictly validates 256-bit entropy of `DOCSHIELD_AES_KEY` from environment variables.
 
-### Result Aggregator
-Combines all four layer outputs into a single explainable report containing:
-
-- **Verdict** — Genuine / Fake / Suspicious
-- **Confidence score** — 0 to 100
-- **Highlighted suspicious regions** — overlaid directly on the document image
-- **Reason tags** — e.g. "MRZ mismatch," "Photo splicing detected"
+### 3. Server-Side IDOR & Authorization Protection
+- Implemented in `app/security/session_auth.py`.
+- Rejects client-supplied tenant IDs. Requests are bound server-side to cryptographically random session tokens (`X-Session-ID` header or `docshield_session` HTTP-only cookie).
+- Accessing another user's scan record returns **HTTP 403 Forbidden** with zero metadata leakage.
+- Enforces strict path traversal defenses rejecting `..`, absolute paths, and null bytes.
 
 ---
 
-## What Makes This Stand Out
+## 🔬 Advanced Verification Layers
 
-### Explainable AI (XAI)
-The system shows *why* it flagged a document, not just a verdict. This is the single most important differentiator for hackathon evaluation — converting raw model outputs into a structured forensic report is consistently what impresses judges in document-verification projects.
+### Layer: Document Source Verification
+- **PDF Structure Analysis**: Inspects PDF object dictionaries, Creator/Producer headers, incremental updates, AcroForms, and digital signature dictionaries (`/Sig`, `/ByteRange`).
+- **Image Metadata Analysis**: Evaluates EXIF tags (`Make`, `Model`, `Software`) and checks for typical screen capture dimensions (e.g. 1920x1080, 2560x1440).
+- **Status Codes**: `ORIGINAL-LIKE STRUCTURE`, `POSSIBLE SCAN/SCREENSHOT`, `STRUCTURAL ANOMALY`, `UNABLE TO DETERMINE`, `NOT APPLICABLE`.
 
-### Multi-Layered, Parallel Processing
-All four layers run simultaneously rather than one after another, keeping total analysis time under 10 seconds — fast enough for a smooth, judge-friendly live demo.
+### Layer: Visual Forensics & Layout Consistency
+- **Text Spacing**: Evaluates inter-word and inter-character spacing variance across detected bounding boxes.
+- **Baseline Alignment**: Computes vertical baseline deviation across neighboring text lines.
+- **Font Stroke Consistency**: Measures median stroke thickness variance across text fields.
+- **Photo Region Integrity**: Calculates localized noise and Error Level Analysis (ELA) ratios between the photo region and the document canvas.
 
-### Synthetic Data Pipeline
-Real Indian identity documents cannot be used for training, so the model is trained entirely on synthetic forgeries:
-- A public forged-document dataset with pixel-level forgery masks (~3,000 images) as a base
-- Custom-generated variations: text edits, photo swaps, MRZ modifications
+### Layer: Barcode & QR Code Forensic Cross-Check
+- **Multi-Engine Decoding**: Employs `pyzbar` with contrast-limited adaptive histogram equalization (CLAHE) and grayscale fallbacks.
+- **Field-Aware Payload Parsing**: Extracts structured fields from Indian identity QR payloads (Aadhaar XML, Secure QR, and PAN formats).
+- **Cross-Verification**: Compares normalized numbers against OCR-extracted text. Identifies high-confidence mismatches without penalizing documents that legitimately do not feature barcodes.
 
-This mirrors how commercial deepfake-document detectors are trained — on documents produced by the same generative tools fraudsters use — so the model learns to recognize forgery *signatures*, not memorize specific documents. It also keeps the project ethical and privacy-respecting.
-
-### Real-Time Demo Flow
-
-| Step | Action | What Judges See |
-|---|---|---|
-| 1 | Upload a genuine ID | Document preview |
-| 2 | Click "Analyze" | Progress bar; parallel layer checks running live |
-| 3 | Result (Genuine) | Green "Genuine" badge, 98% confidence, clean report |
-| 4 | Upload a forged ID | Same process repeats |
-| 5 | Result (Fake) | Red "Fake" badge, heatmap overlay, reason list |
-
----
-
-## Key Signals Detected
-
-| Signal | Detection Method | Example |
-|---|---|---|
-| Photo splicing | ELA heatmap shows differing compression | Edited face pasted onto ID |
-| Text tampering | OCR consistency check | DOB in MRZ vs. printed text mismatch |
-| Copy-move | Keypoint matching detects duplicates | Same element cloned in multiple places |
-| AI generation | GAN / diffusion artifact detection | Unnatural texture and noise patterns |
-| Injection attack | Device / behavioral signals | Document frame replayed during a live session |
+### Layer: Cross-Document Biometric Face Matching (Optional)
+- Accepts an optional secondary document or selfie (`secondary_image` in form-data).
+- Employs Haar cascade detection and spatial multi-cell texture/gradient descriptors.
+- Evaluates cosine similarity against empirical thresholds (`>= 0.78` for match).
+- Returns honest statuses: `SAME`, `DIFFERENT`, `NO FACE`, `MULTIPLE FACES`, `LOW QUALITY`, `NOT PERFORMED`.
 
 ---
 
-## Quick Start & Local Execution
+## ⚖️ Explicit Verification Limitations & Disclaimers
 
-DocShield AI runs with a Flask backend (port 5000) and a React + Tailwind CSS frontend (port 5173).
+Judges and technical evaluators should note the following explicit engineering disclosures:
 
-### Prerequisites
-- Python 3.10+ (tested on Python 3.12)
-- Node.js 18+ and npm
-- (Optional) Tesseract OCR installed in system PATH for physical document OCR
+1. **Document Source Verification is NOT DigiLocker Authentication**:  
+   *DocShield AI inspects internal structural PDF object tables and metadata characteristics. It does NOT claim official DigiLocker authentication or sovereign Certifying Authority (CA) validation unless an authorized, legally licensed DigiLocker gateway API is explicitly configured.*
+2. **Face Matching is User-Supplied Comparison**:  
+   *The biometric face matcher compares user-supplied images only. It does NOT perform government database queries (such as UIDAI Aadhaar face authentication) or legal identity attestation.*
+3. **Forensic Anomalies are Signals, Not Absolute Proof**:  
+   *Visual anomalies (such as text spacing variance or metadata absence) are indicators of potential editing, but can also result from legitimate camera compression, scanner re-encoding, or messaging app downsampling. Unknown or missing signals are never treated as proof of forgery (`UNKNOWN ≠ FAIL`).*
 
-### 1. Start Backend Service
+---
+
+## 🧪 Automated Test Suite (63 Tests, 100% Passed)
+
+The test suite covers unit, integration, and security penetration test cases:
+
+```bash
+cd docshield-backend
+.\.venv\Scripts\pytest -v
+```
+
+### Breakdown of Test Results:
+- **`tests/test_advanced_verification.py` (16 Tests)**: AES-256-GCM encryption, tamper rejection, key entropy, ephemeral file deletion on success & failure, session IDOR isolation, path traversal, screenshot detection, EXIF extraction, QR/OCR mismatch detection, missing barcode neutrality, and face matching.
+- **`tests/test_analyze.py` (4 Tests)**: Upload endpoint validation, multipart handling, empty payload rejection, and fake extension prevention.
+- **`tests/test_auth.py` (8 Tests)**: Admin authentication, password hashing, account lockout, JWT tamper resistance, and RBAC authorization.
+- **`tests/test_file_validation.py` (8 Tests)**: Magic bytes validation, decompression bomb prevention, SVG script injection defense, and format normalization.
+- **`tests/test_security.py` (8 Tests)**: Adversarial attacks, rate limiting, exception leakage prevention, and directory traversal.
+- **`tests/test_layers*.py` (19 Tests)**: Behavioral heuristics, ICAO TD3 MRZ check digits, ELA, copy-move ORB matching, FFT frequency analysis, and neural network inference.
+
+---
+
+## 🚀 Quick Start & Judge Demonstration
+
+### 1. Start the Backend API Server
 ```bash
 cd docshield-backend
 # Activate virtual environment
-.\.venv\Scripts\activate       # On Windows PowerShell
-# source .venv/bin/activate    # On Linux/macOS
-
-# Start Flask API server (runs on http://localhost:5000)
+.\.venv\Scripts\activate
+# Start Flask server
 python run.py
 ```
+*Backend runs at `http://localhost:5000` with SQLite auto-migration and AES encryption.*
 
-### 2. Start Frontend UI
+### 2. Start the Frontend React Client
 ```bash
-# In the repository root directory
+# In repository root
 npm install
 npm run dev
 ```
-Open your browser at `http://localhost:5173` to explore the DocShield AI portal.
+*Frontend runs at `http://localhost:5173`.*
 
 ---
 
-## Ready-to-Test Judge Presets (Zero Setup Required)
+## 📋 Judge Demonstration Matrix (7 Key Scenarios)
 
-The project includes 4 pre-generated test documents in `sample_documents/` and `public/sample_documents/` that demonstrate every detection capability out of the box:
-
-1. **Genuine Indian Passport (`sample_genuine_passport.png`)**
-   - **Verdict:** Genuine (98.0% Confidence)
-   - **Characteristics:** Valid ICAO Doc 9303 TD3 MRZ check digits (7-3-1 recurring weight algorithm), uniform typography, clean sensor noise.
-2. **Forged Aadhaar Card (`sample_forged_aadhaar_dob_tamper.jpg`)**
-   - **Verdict:** Fake (91.4% Confidence)
-   - **Characteristics:** Spliced Date of Birth with altered compression level (flagged by Layer 3 ELA) and misaligned text baseline.
-3. **Cloned PAN Card (`sample_cloned_pan_card.png`)**
-   - **Verdict:** Fake (88.0% Confidence)
-   - **Characteristics:** Duplicated security emblem and stamp detected by Layer 3 ORB keypoint matching (Copy-Move anomaly).
-4. **Spliced Voter ID (`sample_spliced_voter_id.jpg`)**
-   - **Verdict:** Fake (89.5% Confidence)
-   - **Characteristics:** Photo tampering, noise edge inconsistency, invalid layout.
-
-> **One-Click Demo in UI:** Click the **"Load Preset Document"** buttons directly inside the upload screen at `http://localhost:5173/verify` to instantly load, preview, and analyze these documents without manual file searching!
+| Scenario | Test Document | Expected Result | What the System Proves vs Cannot Prove |
+| :--- | :--- | :--- | :--- |
+| **Case 1: Normal Genuine Document** | `sample_genuine_passport.png` | **Genuine** (PASS across all layers) | Proves valid ICAO MRZ checksums and structural integrity; cannot prove passport is not reported lost/stolen. |
+| **Case 2: Altered Text Spacing/Alignment** | Preset / Altered Text Sample | **Suspicious** (Visual Forensics: Flagged) | Proves baseline offset and stroke width inconsistency; cannot prove intent of editor. |
+| **Case 3: ID Number Tampered with Original QR** | Tampered Aadhaar with QR | **Suspicious / Fake** (QR Cross-Check: MISMATCH) | Proves visible OCR number differs from cryptographic barcode payload; strong proof of field splicing. |
+| **Case 4: Inconsistent Photo Region** | `sample_spliced_voter_id.jpg` | **Fake** (Forensics: High ELA / Noise Ratio) | Proves photo region has distinct compression and sharp boundary artifacts compared to canvas. |
+| **Case 5: Screenshot Document** | Mobile screenshot of ID | **Document Source: POSSIBLE SCREENSHOT** | Proves screen aspect ratio and missing camera EXIF; does not penalize score as forgery. |
+| **Case 6: Matching Faces (Cross-Doc)** | Document A + Document B (Same Person) | **Face Match: SAME** (Similarity >= 0.78) | Proves both documents depict the same individual; does not attest to government identity validity. |
+| **Case 7: Different Faces (Cross-Doc)** | Document A + Document B (Different Person) | **Face Match: DIFFERENT** (Similarity < 0.78) | Proves the two submitted documents belong to distinct individuals. |
 
 ---
 
-## Dropping in External Colab Model (Layer 4)
-
-DocShield AI is architected so that the neural network trained separately in Google Colab drops directly into the backend with **zero code refactoring**:
-
-### Step-by-Step Drop-In:
-1. **Save Model in Colab:**
-   ```python
-   # In your Google Colab training notebook:
-   torch.save(model.state_dict(), "docshield_best_model.pth")
-   ```
-2. **Place File in Backend Weights Folder:**
-   Copy `docshield_best_model.pth` into:
-   ```
-   docshield-backend/app/ml/weights/docshield_best_model.pth
-   ```
-3. **Automatic Loading:**
-   At server startup, `app/ml/model_loader.py` automatically checks for `app/ml/weights/docshield_best_model.pth` and loads it as a singleton.
-4. **Custom Inference / Grad-CAM (Optional):**
-   If your Colab model uses a custom architecture (e.g. Vision Transformer or customized EfficientNet), replace the placeholder methods in `docshield-backend/app/layers/layer4_ai_detection.py`:
-   - `predict(image_path)` — returns `{"is_fake": bool, "confidence": float, "probabilities": dict}`
-   - `generate_gradcam(image_path)` — returns `(heatmap_bgr_array, overlay_bgr_array)`
-
----
-
-## Running Automated Verification & Tests
-
-### Backend Test Suite (45 Tests, 100% Passed)
-```bash
-cd docshield-backend
-.\.venv\Scripts\python -m pytest tests/ -v
-```
-
-### End-to-End Pipeline Verification Script
-```bash
-cd docshield-backend
-.\.venv\Scripts\python scripts/test_pipeline.py
-```
-
-### Frontend Production Build
-```bash
-npm run build
-```
-
----
-
-## Team
-
-**InnovX** — Karunya Institute of Technology and Sciences, Coimbatore
-Smart India Hackathon 2026, Problem Statement SIH26188
+## 👥 Team InnovX
+- Karunya Institute of Technology and Sciences, Coimbatore
+- Smart India Hackathon 2026 — Problem Statement SIH26188

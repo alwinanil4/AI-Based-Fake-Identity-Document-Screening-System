@@ -1,25 +1,42 @@
-"""DocShield AI — History and Scan Detail API Endpoints.
+"""DocShield AI — History and Scan Detail API Endpoints with IDOR Enforcement.
 
-Provides public / demo endpoints for querying past scan audits and inspection details:
-- GET /api/history: List past scans with thumbnail, verdict, confidence, timestamp.
-- GET /api/scan/<id>: Full detail of a single scan (heatmap, layer breakdown, reasons).
+Provides secure endpoints for querying past scan audits and inspection details:
+- GET /api/history: List past scans owned by caller session or admin view.
+- GET /api/scan/<id>: Full detail of a single scan with server-side IDOR ownership verification.
 - GET /api/stats: Aggregated statistics computed from real database records.
 """
 
 from flask import Blueprint, jsonify, request, g
 from app.models.scan import ScanResult
+from app.security.session_auth import (
+    extract_caller_identity,
+    check_scan_ownership,
+    sanitize_identifier,
+    assert_safe_path,
+)
 
 history_bp = Blueprint("history", __name__)
 
 
 @history_bp.route("/history", methods=["GET"])
 def get_scan_history():
-    """GET /api/history — Retrieve past scan records for demo and admin history view."""
+    """GET /api/history — Retrieve scan records with server-side ownership filtering."""
+    caller_type, caller_id = extract_caller_identity()
     verdict_filter = request.args.get("verdict")
     limit = min(int(request.args.get("limit", 50)), 100)
     offset = max(int(request.args.get("offset", 0)), 0)
 
     query = ScanResult.query
+
+    # IDOR Protection: Standard users see only their own session scans or public presets
+    if caller_type != "admin":
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(
+                ScanResult.owner_session_id == caller_id,
+                ScanResult.owner_session_id.is_(None),
+            )
+        )
 
     if verdict_filter and verdict_filter.lower() != "all":
         query = query.filter(ScanResult.verdict.ilike(verdict_filter.strip()))
@@ -38,29 +55,50 @@ def get_scan_history():
 
 @history_bp.route("/scan/<scan_id>", methods=["GET"])
 def get_scan_by_id(scan_id: str):
-    """GET /api/scan/<id> — Retrieve complete forensic detail for a single scan."""
+    """GET /api/scan/<id> — Retrieve complete forensic detail with IDOR authorization check."""
+    caller_type, caller_id = extract_caller_identity()
+
+    # Reject path traversal / invalid format identifiers
+    clean_id = sanitize_identifier(scan_id)
+    if not clean_id or ".." in scan_id or "/" in scan_id or "\\" in scan_id:
+        return jsonify({
+            "error": "Bad Request",
+            "message": "Invalid or unsafe scan identifier format.",
+            "request_id": getattr(g, "request_id", None),
+        }), 400
+
     record = None
 
     # Support 'SCAN-0004', numeric ID '4', or UUID 'req-...'
-    if scan_id.upper().startswith("SCAN-"):
+    if clean_id.upper().startswith("SCAN-"):
         try:
-            num_id = int(scan_id.split("-")[1])
+            num_id = int(clean_id.split("-")[1])
             record = ScanResult.query.filter_by(id=num_id).first()
         except Exception:
             pass
 
-    if not record and scan_id.isdigit():
-        record = ScanResult.query.filter_by(id=int(scan_id)).first()
+    if not record and clean_id.isdigit():
+        record = ScanResult.query.filter_by(id=int(clean_id)).first()
 
     if not record:
-        record = ScanResult.query.filter_by(request_id=scan_id).first()
+        record = ScanResult.query.filter_by(request_id=clean_id).first()
 
     if not record:
         return jsonify({
             "error": "Not Found",
-            "message": f"Scan with ID '{scan_id}' does not exist.",
+            "message": "The requested scan record does not exist.",
             "request_id": getattr(g, "request_id", None),
         }), 404
+
+    # IDOR Server-Side Ownership Enforcement
+    is_authorized = check_scan_ownership(record, caller_type, caller_id)
+    if not is_authorized:
+        # Zero Data Leakage: return 403 without disclosing record contents, owner, or filenames
+        return jsonify({
+            "error": "Forbidden",
+            "message": "Access denied: You do not have authorization to access this audit record.",
+            "request_id": getattr(g, "request_id", None),
+        }), 403
 
     result = record.to_dict()
     result["scan"] = record.to_dict()

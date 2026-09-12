@@ -8,6 +8,8 @@ bcrypt==5.0.0
 python-dotenv==1.2.3
 pydantic==2.13.5
 email-validator==2.3.0
+cryptography>=42.0.0
+pypdf>=4.0.0
 
 # Image Processing & Forensics
 Pillow==12.3.0
@@ -31,3 +33,6 @@ waitress==3.0.0
 
 # Testing & Code Quality
 pytest==9.1.1
+
+# AI & Vision (Groq-powered document field extraction — free, ultra-fast)
+groq>=0.11.0

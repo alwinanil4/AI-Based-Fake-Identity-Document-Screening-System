@@ -762,7 +762,18 @@ class OCRForensicExtractor:
 
 
 def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> Dict[str, Any]:
-    """Main execution function for Layer 2: OCR & Structural Validation."""
+    """Main execution function for Layer 2: OCR & Structural Validation.
+
+    Pipeline:
+      1. Multi-engine OCR (EasyOCR / Tesseract)
+      2. MRZ validation (ICAO Doc 9303)
+      3. Barcode / QR detection
+      4. Document classification
+      5. Regex-based structural field extraction
+      6. Gemini Vision AI field extraction (if GEMINI_API_KEY is set)
+      7. Field merging (AI + OCR + MRZ)
+      8. Layout & font alignment forensics
+    """
     text, lines, tokens = OCRForensicExtractor.extract_text_and_lines(
         image, custom_cmd=custom_tesseract_cmd
     )
@@ -773,16 +784,40 @@ def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> D
     # 2. Barcode & QR detection
     barcodes = OCRForensicExtractor.decode_barcodes(image)
 
-    # 3. Document classification
+    # 3. Document classification (OCR-based)
     doc_type = mrz_info.get("document_type") or OCRForensicExtractor.classify_document_type(text, lines)
 
-    # 4. Extract visual fields
-    fields = OCRForensicExtractor.extract_structural_fields(text, lines, doc_type=doc_type)
+    # 4. Extract visual fields via regex/heuristic OCR
+    ocr_fields = OCRForensicExtractor.extract_structural_fields(text, lines, doc_type=doc_type)
 
-    # 5. Check layout & font baseline alignment
+    # 5. Gemini Vision AI field extraction — runs independently of OCR
+    try:
+        from app.layers.gemini_extractor import extract_fields_with_ai, merge_ai_and_ocr_fields
+        ai_fields = extract_fields_with_ai(image, ocr_text_hint=text)
+    except Exception as ai_err:
+        logger.warning("AI extraction import/call error: %s", ai_err)
+        ai_fields = {}
+
+    # 6. Merge AI + OCR fields (AI enhances OCR, not replaces it)
+    ai_confidence = ai_fields.get("ai_confidence", "medium") if ai_fields else "low"
+    if ai_fields:
+        try:
+            from app.layers.gemini_extractor import merge_ai_and_ocr_fields
+            merged_fields = merge_ai_and_ocr_fields(ai_fields, ocr_fields, ai_confidence=ai_confidence)
+        except Exception:
+            merged_fields = ocr_fields
+        # Use AI's document_type if OCR got 'unknown'
+        if doc_type == "unknown" and ai_fields.get("document_type") and ai_fields["document_type"] != "unknown":
+            doc_type = ai_fields["document_type"]
+    else:
+        merged_fields = ocr_fields
+
+    fields = merged_fields
+
+    # 7. Check layout & font baseline alignment
     alignment_passed, alignment_anomalies = OCRForensicExtractor.check_layout_and_font_alignment(image)
 
-    # If MRZ provided trusted structured fields, fill them in
+    # If MRZ provided trusted structured fields, fill them in (MRZ is highest-trust)
     if mrz_info.get("mrz_detected"):
         if not fields.get("document_number"):
             fields["document_number"] = mrz_info.get("document_number")
@@ -839,8 +874,14 @@ def run_layer2_analysis(image: Image.Image, custom_tesseract_cmd: str = "") -> D
             "gender": fields.get("gender"),
             "address": fields.get("address"),
             "expiry_date": fields.get("expiry_date"),
+            "nationality": fields.get("nationality"),
+            "issue_date": fields.get("issue_date"),
             "raw_text_snippet": text[:300] if text else None,
             "raw_lines": lines[:20],
+            # AI extraction metadata
+            "ai_extraction_used": fields.get("ai_extraction_used", False),
+            "ai_confidence": fields.get("ai_confidence"),
+            "ai_unreadable_fields": fields.get("ai_unreadable_fields", []),
         },
         "mrz_detected": mrz_info.get("mrz_detected", False),
         "mrz_checksum_valid": mrz_info.get("mrz_checksum_valid"),
